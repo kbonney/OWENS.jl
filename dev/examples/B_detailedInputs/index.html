@@ -83,7 +83,7 @@ mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, A
     NuMad_mat_xlscsv_file_bld,# = &quot;$path/data/NuMAD_Materials_SNL_5MW_D_Carbon_LCDT_ThickFoils_ThinSkin.csv&quot;,
     NuMad_geom_xlscsv_file_strut,
     NuMad_mat_xlscsv_file_strut,
-    Ht=towerHeight,
+    Htwr_base=towerHeight,
     ntelem,
     nbelem,
     ncelem,
@@ -96,7 +96,13 @@ mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, A
     cables_connected_to_blade_base = true,
     meshtype = turbineType)
 
-nothing</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+nothing</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Mesh warning: two points are directly on top of one another, consider adjusting number of elements to space out the mesh
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/meshing_utilities.jl:392
+┌ Warning: Mesh warning: two points are directly on top of one another, consider adjusting number of elements to space out the mesh
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/meshing_utilities.jl:392
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:135
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
 └ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:135
 ┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
 └ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:135
@@ -226,31 +232,31 @@ nothing</code></pre><pre class="documenter-example-output"><code class="nohighli
 
 UPPER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 9.603059460090083
-At time 0.096s at composite station 11 of 21 at lam 4 of 6
-Maximum Damage per hr: 0.47272727272733883
-At composite station 9 of 21 at lam 5 of 6
+Minimum Safety Factor on Surface: 6.685382877447953
+At time 0.065s at composite station 6 of 21 at lam 4 of 6
+Maximum Damage per hr: 0.7272727272728107
+At composite station 13 of 21 at lam 5 of 6
 
 
 LOWER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 10.99499394765229
-At time 0.099s at composite station 16 of 21 at lam 4 of 6
-Maximum Damage per hr: 0.9454545456409553
-At composite station 9 of 21 at lam 1 of 6
+Minimum Safety Factor on Surface: 7.02170109118937
+At time 0.068s at composite station 6 of 21 at lam 4 of 6
+Maximum Damage per hr: 0.509090909110137
+At composite station 13 of 21 at lam 2 of 6
 
 
 UPPER TOWER
 
-Minimum Safety Factor on tower Surface: 9.235772116015763
-At time 0.097s at composite station 6 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.10909090917514354
-At composite station 1 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 9.445346583340072
+At time 0.088s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.1454545455513132
+At composite station 5 of 21 at lam 1 of 1
 
 
 Lower TOWER
 
-Minimum Safety Factor on tower Surface: 27.658473494832347
-At time 0.064s at composite station 6 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.10909090909654291
-At composite station 7 of 21 at lam 1 of 1</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../A_simplyRunningOWENS/">« Simply Running OWENS</a><a class="docs-footer-nextpage" href="../C_customizablePreprocessing/">Customizable Preprocessing »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Friday 5 July 2024 16:32">Friday 5 July 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Minimum Safety Factor on tower Surface: 28.126456240622517
+At time 0.099s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.109090909131843
+At composite station 3 of 21 at lam 1 of 1</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../A_simplyRunningOWENS/">« Simply Running OWENS</a><a class="docs-footer-nextpage" href="../C_customizablePreprocessing/">Customizable Preprocessing »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Monday 15 July 2024 14:37">Monday 15 July 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
