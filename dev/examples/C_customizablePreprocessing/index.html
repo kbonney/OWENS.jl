@@ -351,11 +351,11 @@ nothing</code></pre><p>Set up the OWENSAero aerodynamics if used</p><pre><code c
     delta_xs = shapeX[2:end] - shapeX[1:end-1]
     delta_zs = shapeZ[2:end] - shapeZ[1:end-1]
     delta3D = atan.(delta_xs./delta_zs)
-    delta3D_spl = FLOWMath.akima(shapeZ[1:end-1]./maximum(shapeZ[1:end-1]), delta3D,LinRange(0,1,length(numadIn_bld.span)-1))
+    delta3D_spl = OWENS.safeakima(shapeZ[1:end-1]./maximum(shapeZ[1:end-1]), delta3D,LinRange(0,1,length(numadIn_bld.span)-1))
 
     bld_height_numad = cumsum(diff(numadIn_bld.span).*(1.0.-abs.(sin.(delta3D_spl)))) # now convert the numad span to a height
 
-    chord = FLOWMath.akima(bld_height_numad./maximum(bld_height_numad), numadIn_bld.chord,LinRange(0,1,Nslices)) # now we can use it to access the numad data
+    chord = OWENS.safeakima(bld_height_numad./maximum(bld_height_numad), numadIn_bld.chord,LinRange(minimum(bld_height_numad),1,Nslices)) # now we can use it to access the numad data
     airfoils = fill(&quot;nothing&quot;,Nslices)
 
     for (iheight_numad,height_numad) in enumerate(bld_height_numad./maximum(bld_height_numad)) # Discretely assign the airfoils
@@ -391,7 +391,7 @@ nothing</code></pre><p>Set up AeroDyn if used Here we create AeroDyn the files, 
 
     NumADBldNds = NumADStrutNds = 10
 
-    bldchord_spl = FLOWMath.akima(numadIn_bld.span./maximum(numadIn_bld.span), numadIn_bld.chord,LinRange(0,1,NumADBldNds))
+    bldchord_spl = OWENS.safeakima(numadIn_bld.span./maximum(numadIn_bld.span), numadIn_bld.chord,LinRange(0,1,NumADBldNds))
 
     airfoil_filenames = fill(&quot;nothing&quot;,NumADBldNds) # Discretely assign the airfoils #TODO: separate out struts
     for (ispan_numad,span_numad) in enumerate(numadIn_bld.span./maximum(numadIn_bld.span))
@@ -408,7 +408,7 @@ nothing</code></pre><p>Set up AeroDyn if used Here we create AeroDyn the files, 
         blade_Nnodes = [NumADBldNds for i=1:Nbld]
     else
         blade_filenames = [[blade_filename for i=1:Nbld];[lower_strut_filename for i=1:Nbld];[upper_strut_filename for i=1:Nbld]]
-        strutchord_spl = FLOWMath.akima(numadIn_strut.span./maximum(numadIn_strut.span), numadIn_strut.chord,LinRange(0,1,NumADStrutNds))
+        strutchord_spl = OWENS.safeakima(numadIn_strut.span./maximum(numadIn_strut.span), numadIn_strut.chord,LinRange(0,1,NumADStrutNds))
         blade_chords = [[bldchord_spl for i=1:Nbld];[strutchord_spl for i=1:Nbld];[strutchord_spl for i=1:Nbld]]
         blade_Nnodes = [[NumADBldNds for i=1:Nbld];[NumADStrutNds for i=1:Nbld];[NumADStrutNds for i=1:Nbld]]
     end
@@ -441,7 +441,7 @@ nothing</code></pre><p>Set up AeroDyn if used Here we create AeroDyn the files, 
         ymesh = mymesh.y[strt_idx:end_idx]
         ADshapeX = sqrt.(xmesh.^2 .+ ymesh.^2)
         ADshapeX .-= ADshapeX[1] #get it starting at zero #TODO: make robust for blades that don&#39;t start at 0
-        ADshapeXspl = FLOWMath.akima(LinRange(0,H,length(ADshapeX)),ADshapeX,ADshapeZ)
+        ADshapeXspl = OWENS.safeakima(LinRange(0,H,length(ADshapeX)),ADshapeX,ADshapeZ)
 
         if iADBody&lt;=Nbld #Note that the blades can be curved and are assumed to be oriented vertically
             BlSpn=ADshapeZ
@@ -625,31 +625,31 @@ Composite Ultimate and Buckling Safety Factors
 
 UPPER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 4.716504043026165
-At time 0.099s at composite station 21 of 21 at lam 6 of 6
-Maximum Damage per hr: 0.43636363636366265
-At composite station 14 of 21 at lam 5 of 6
+Minimum Safety Factor on Surface: 2.242310592126819
+At time 0.009000000000000001s at composite station 18 of 21 at lam 4 of 6
+Maximum Damage per hr: 0.4363636364389486
+At composite station 9 of 21 at lam 1 of 6
 
 
 LOWER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 4.742591662528254
-At time 0.099s at composite station 21 of 21 at lam 6 of 6
-Maximum Damage per hr: 0.4727272727497183
-At composite station 14 of 21 at lam 2 of 6
+Minimum Safety Factor on Surface: 1.8774573148875617
+At time 0.008s at composite station 15 of 21 at lam 4 of 6
+Maximum Damage per hr: 0.47272727335902187
+At composite station 13 of 21 at lam 1 of 6
 
 
 UPPER TOWER
 
-Minimum Safety Factor on tower Surface: 10.211549514783949
-At time 0.08s at composite station 18 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.18181818193045596
-At composite station 1 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 10.238300521439012
+At time 0.03s at composite station 16 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.18181818189411827
+At composite station 16 of 21 at lam 1 of 1
 
 
 Lower TOWER
 
-Minimum Safety Factor on tower Surface: 22.03238062546613
-At time 0.063s at composite station 18 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.10909090910969185
-At composite station 17 of 21 at lam 1 of 1</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../B_detailedInputs/">« Detailed Inputs</a><a class="docs-footer-nextpage" href="../../OWENS_Dev_Guide/">Developer Guide »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Monday 19 August 2024 20:01">Monday 19 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Minimum Safety Factor on tower Surface: 6.076282056501999
+At time 0.055s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.10909090914308087
+At composite station 19 of 21 at lam 1 of 1</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../B_detailedInputs/">« Detailed Inputs</a><a class="docs-footer-nextpage" href="../../OWENS_Dev_Guide/">Developer Guide »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.6.0 on <span class="colophon-date" title="Friday 30 August 2024 18:03">Friday 30 August 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
