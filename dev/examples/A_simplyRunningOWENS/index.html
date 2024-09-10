@@ -1,11 +1,430 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simply Running OWENS · OWENS.jl</title><meta name="title" content="Simply Running OWENS · OWENS.jl"/><meta property="og:title" content="Simply Running OWENS · OWENS.jl"/><meta property="twitter:title" content="Simply Running OWENS · OWENS.jl"/><meta name="description" content="Documentation for OWENS.jl."/><meta property="og:description" content="Documentation for OWENS.jl."/><meta property="twitter:description" content="Documentation for OWENS.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">OWENS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../setup/">Installation</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Simply Running OWENS</a></li><li><a class="tocitem" href="../B_detailedInputs/">Detailed Inputs</a></li><li><a class="tocitem" href="../C_customizablePreprocessing/">Customizable Preprocessing</a></li></ul></li><li><a class="tocitem" href="../../OWENS_Dev_Guide/">Developer Guide</a></li><li><a class="tocitem" href="../../FramesOfReference/">Frames of Reference</a></li><li><a class="tocitem" href="../../reference/reference/">API Reference</a></li><li><a class="tocitem" href="../../legacyUserGuide/">Legacy User Guide</a></li><li><a class="tocitem" href="../../VAWTGenUserGuide/">Legacy VAWTGen Guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Simply Running OWENS</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simply Running OWENS</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="simple1"><a class="docs-heading-anchor" href="#simple1">Simply Running OWENS</a><a id="simple1-1"></a><a class="docs-heading-anchor-permalink" href="#simple1" title="Permalink"></a></h1><p>In this example, we show the first level of what is going on behind the precompiled binary Running julia directly with this as a starting point could make things like automating many runs in a way that is not compatible with the current interface, but your design design fits.</p><p>OWENS is comprised of many building blocks.  These series of examples progressively shows the internals of several of the key building blocks a new user might employ for their projects.  Fundamentally, OWENS has been built to be as generalizable as possible. The lowest level of building blocks enable this, however, there are many common use cases for which helper functions have been developed, such as for meshing certain standard architectures and calculating and applying sectional properties to these architectures. The figure below summarizes this at a high level. TODO: yml file definition and inputs expanded</p><p><img src="../../assets/OWENS_Example_Figure_Building_Blocks.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>This example is also available as a Jupyter notebook todo: get link working:</p></div></div><pre><code class="language-julia hljs">import OWENS
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simply Running OWENS · OWENS.jl</title><meta name="title" content="Simply Running OWENS · OWENS.jl"/><meta property="og:title" content="Simply Running OWENS · OWENS.jl"/><meta property="twitter:title" content="Simply Running OWENS · OWENS.jl"/><meta name="description" content="Documentation for OWENS.jl."/><meta property="og:description" content="Documentation for OWENS.jl."/><meta property="twitter:description" content="Documentation for OWENS.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">OWENS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Simply Running OWENS</a></li><li><a class="tocitem" href="../B_detailedInputs/">Detailed Inputs</a></li><li><a class="tocitem" href="../C_customizablePreprocessing/">Customizable Preprocessing</a></li></ul></li><li><a class="tocitem" href="../../OWENS_Dev_Guide/">Developer Guide</a></li><li><a class="tocitem" href="../../reference/reference/">OWENS Functions Reference</a></li><li><a class="tocitem" href="../../reference/referenceAero/">OWENSAero Functions Reference</a></li><li><a class="tocitem" href="../../reference/referenceFEA/">OWENSFEA Functions Reference</a></li><li><a class="tocitem" href="../../reference/referenceOpenFASTWrappers/">OWENSOpenFASTWrappers Functions Reference</a></li><li><a class="tocitem" href="../../reference/referencePreComp/">OWENSPreComp Functions Reference</a></li><li><a class="tocitem" href="../../legacyUserGuide/">Legacy User Guide</a></li><li><a class="tocitem" href="../../VAWTGenUserGuide/">Legacy VAWTGen Guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Simply Running OWENS</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simply Running OWENS</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="simple1"><a class="docs-heading-anchor" href="#simple1">Simply Running OWENS</a><a id="simple1-1"></a><a class="docs-heading-anchor-permalink" href="#simple1" title="Permalink"></a></h1><p>In this example, we show the first level of what is going on behind the precompiled binary Running julia directly with this as a starting point could make things like automating many runs in a way that is not compatible with the current interface, but your design design fits.</p><p>OWENS is comprised of many building blocks.  These series of examples progressively shows the internals of several of the key building blocks a new user might employ for their projects.  Fundamentally, OWENS has been built to be as generalizable as possible. The lowest level of building blocks enable this, however, there are many common use cases for which helper functions have been developed, such as for meshing certain standard architectures and calculating and applying sectional properties to these architectures. The figure below summarizes this at a high level. TODO: yml file definition and inputs expanded</p><p><img src="../../assets/OWENS_Example_Figure_Building_Blocks.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>This example is also available as a Jupyter notebook todo: get link working:</p></div></div><pre><code class="language-julia hljs">import OWENS
 
-runpath = &quot;/home/runner/work/OWENS.jl/OWENS.jl/docs/src/literate&quot; #splitdir(@__FILE__)[1]
+runpath = path = &quot;/home/runner/work/OWENS.jl/OWENS.jl/examples/literate&quot; # to run locally, change to splitdir(@__FILE__)[1]
+##runpath = path = &quot;/Users/kevmoor/Documents/coderepos/OWENS_Toolkit/OWENS.jl/examples/literate&quot;#splitdir(@__FILE__)[1]
 
-Inp = OWENS.MasterInput(&quot;/home/runner/work/OWENS.jl/OWENS.jl/docs/src/literate/sampleOWENS.yml&quot;)
+Inp = OWENS.MasterInput(&quot;$runpath/sampleOWENS.yml&quot;)
 
-OWENS.runOWENS(Inp,runpath)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Float64}:
- 1.0
- 2.0
- 3.0</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../setup/">« Installation</a><a class="docs-footer-nextpage" href="../B_detailedInputs/">Detailed Inputs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 4 September 2024 14:58">Wednesday 4 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+OWENS.runOWENS(Inp,runpath)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+Opening AeroDyn-Inflow library at: /home/runner/.julia/packages/OWENSOpenFASTWrappers/I4PFf/src/../deps/openfast/build/modules/aerodyn/libaerodyn_inflow_c_binding
+
+ **************************************************************************************************
+ AeroDyn-Inflow library
+
+ Copyright (C) 2024 National Renewable Energy Laboratory
+ Copyright (C) 2024 Envision Energy USA LTD
+
+ This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY.
+ See the &quot;LICENSE&quot; file distributed with this software for details.
+ **************************************************************************************************
+
+ AeroDyn-Inflow library--128-NOTFOUND
+ Compile Info:
+  - Compiler: GCC version 11.4.0
+  - Architecture: 64 bit
+  - Precision: double
+  - OpenMP: Yes, number of threads: 4/4
+  - Date: Sep 10 2024
+  - Time: 01:32:30
+ Execution Info:
+  - Date: 09/10/2024
+  - Time: 01:54:19+0000
+
+ Running ADI.
+ Running AeroDyn.
+ Running OLAF.
+  - Directory:         /home/runner/work/OWENS.jl/OWENS.jl/docs/build/examples
+  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/ExampleB.
+  - Reading advanced options for OLAF:
+ [WARN] Line ignored: &quot;VERT2&quot;   DEFAULT      -10       30.   400     5.      5.     1     5.136    15.136  100
+  - OLAF regularization parameters (for wing 1):
+    WingReg (min/max) :  12.2425 25.2472
+    WakeReg (min/max) :  12.2425 25.2472
+    k = alpha delta nu:   0.0368
+ Running InflowWind.
+
+Blades&#39; Mass Breakout
+CLA_5500 20670.29648289118 kg, 2.06 $/kg: $42580.81075475583
+CBX_2400 9730.417758654583 kg, 2.1 $/kg: $20433.877293174624
+ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
+Airex_C70_55 789.5974763487575 kg, 7.23 $/kg: $5708.7897540015165
+EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
+ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
+Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
+
+Tower Mass Breakout
+CLA_5500 4992.974575844168 kg, 2.06 $/kg: $10285.527626238985
+CBX_2400 1217.5626883060443 kg, 2.1 $/kg: $2556.881645442693
+ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
+Airex_C70_55 0.0 kg, 7.23 $/kg: $0.0
+EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
+ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
+Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
+Total Material Cost Blades: $68723.47780193196
+Total Material Cost Tower: $12842.409271681678
+Total Material Cost: $81565.88707361365
+controlStrategy: normal
+Running Unsteady
+Running in specified rotor speed mode
+
+Simulation Time: 0.0 seconds of 0.99 seconds
+ [INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on
+ subsequent occurences.
+
+Simulation Time: 0.1 seconds of 0.99 seconds
+
+Simulation Time: 0.2 seconds of 0.99 seconds
+
+Simulation Time: 0.3 seconds of 0.99 seconds
+
+Simulation Time: 0.4 seconds of 0.99 seconds
+
+Simulation Time: 0.5 seconds of 0.99 seconds
+
+Simulation Time: 0.6 seconds of 0.99 seconds
+
+Simulation Time: 0.7 seconds of 0.99 seconds
+
+Simulation Time: 0.8 seconds of 0.99 seconds
+
+Simulation Time: 0.9 seconds of 0.99 seconds
+Simulation Complete.
+ &gt;&gt;&gt; FINAL WRITE
+Saving VTK time domain files
+Composite Ultimate and Buckling Safety Factors
+
+
+UPPER BLADE SURFACE
+
+Minimum Safety Factor on Surface: 0.396100421933815
+At time 0.035s at composite station 6 of 21 at lam 6 of 6
+Maximum Damage per hr: 0.32727272730425755
+At composite station 17 of 21 at lam 3 of 6
+
+Spar Cap SF min: 2.7857503051692243
+At time 0.054s at composite station 6 of 21
+Spar Cap Damage max per hour: 9.000000000867082e-6
+At composite station 17 of 21
+
+Leading Edge SF min: 1.1996424522448454
+At time 0.036000000000000004s at composite station 6 of 21
+Leading Edge Damage max per hour: 8.000000000837204e-6
+At composite station 14 of 21
+
+Trailing Edge SF min: 0.396100421933815
+At time 0.035s at composite station 6 of 21
+Trailing Edge Damage max per hour: 7.000000011206093e-6
+At composite station 14 of 21
+
+Fore Panel SF min: 3.6674371585698644
+At time 0.054s at composite station 6 of 21
+Fore Panel Damage max per hour: 9.000000000001686e-6
+At composite station 14 of 21
+
+Aft Panel SF min: 2.3712489724645827
+At time 0.034s at composite station 6 of 21
+Aft Panel Damage max per hour: 6.000000000002889e-6
+At composite station 14 of 21
+
+
+LOWER BLADE SURFACE
+
+Minimum Safety Factor on Surface: 0.39579813639499317
+At time 0.035s at composite station 6 of 21 at lam 6 of 6
+Maximum Damage per hr: 0.4000000000221323
+At composite station 9 of 21 at lam 4 of 6
+
+Spar Cap SF min: 3.4649645886303375
+At time 0.032s at composite station 6 of 21
+Spar Cap Damage max per hour: 6.0000000001931635e-6
+At composite station 14 of 21
+
+Leading Edge SF min: 1.2290347207673296
+At time 0.035s at composite station 6 of 21
+Leading Edge Damage max per hour: 6.000000004065488e-6
+At composite station 14 of 21
+
+Trailing Edge SF min: 0.39579813639499317
+At time 0.035s at composite station 6 of 21
+Trailing Edge Damage max per hour: 7.0000000111829905e-6
+At composite station 14 of 21
+
+Fore Panel SF min: 4.04679589813783
+At time 0.035s at composite station 6 of 21
+Fore Panel Damage max per hour: 6.00000000000124e-6
+At composite station 14 of 21
+
+Aft Panel SF min: 2.2181243360433096
+At time 0.036000000000000004s at composite station 6 of 21
+Aft Panel Damage max per hour: 7.000000001144669e-6
+At composite station 14 of 21
+
+
+UPPER TOWER
+
+Minimum Safety Factor on tower Surface: 2.2804102613223285
+At time 0.099s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.10909090930463705
+At composite station 4 of 21 at lam 1 of 1
+
+
+Lower TOWER
+
+Minimum Safety Factor on tower Surface: 4.331286121960899
+At time 0.035s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.10909090913969649
+At composite station 18 of 21 at lam 1 of 1
+
+Mass of Turbine: 208897.3537787773 kg</code></pre><p>Here is an example of using the same model against the automated DLC run script. Note that for a setup cutom to a specific design, you&#39;ll want to go to the B level to get all of the detailed inputs correct One of these is the controller where a discon controller library can be coupled instead of the specified RPM control.</p><pre><code class="language-julia hljs">simulated_time = 2.0 #seconds
+DLCs = [&quot;1_1&quot;] #&quot;normal&quot;
+#### DLCs = [&quot;1_3&quot;] #&quot;normal&quot;
+#### DLCs = [&quot;1_4&quot;] #&quot;normal&quot;
+#### DLCs = [&quot;1_5&quot;] #&quot;normal&quot;
+#### DLCs = [&quot;2_1&quot;] #&quot;freewheelatNormalOperatingRPM&quot;
+#### DLCs = [&quot;2_3&quot;] #&quot;freewheelatNormalOperatingRPM&quot;
+#### DLCs = [&quot;3_1&quot;] #&quot;startup&quot;
+#### DLCs = [&quot;3_2&quot;] #&quot;startup&quot;
+#### DLCs = [&quot;3_3&quot;] #&quot;startup&quot;
+#### DLCs = [&quot;4_1&quot;] #&quot;shutdown&quot;
+#### DLCs = [&quot;4_2&quot;] #&quot;shutdown&quot;
+#### DLCs = [&quot;5_1&quot;] #&quot;emergencyshutdown&quot;
+#### DLCs = [&quot;6_1&quot;] #&quot;parked&quot;
+#### DLCs = [&quot;6_2&quot;] #&quot;parked_idle&quot;
+#### DLCs = [&quot;6_4&quot;] #&quot;parked&quot;
+#### DLCs = [&quot;7_1&quot;] #&quot;parked&quot;
+#### DLCs = [&quot;2_3&quot;,&quot;3_1&quot;,&quot;3_2&quot;,&quot;3_3&quot;,&quot;4_1&quot;,&quot;4_2&quot;,&quot;5_1&quot;]
+
+OWENS.runDLC(DLCs,Inp,runpath;
+    IEC_std=&quot;\&quot;1-ED3\&quot;&quot;,
+    WindChar=&quot;\&quot;A\&quot;&quot;,
+    WindClass=1,
+    NumGrid_Z=38,
+    NumGrid_Y=26,
+    Vdesign=11.0,
+    grid_oversize=1.25,
+    Vinf_range=[10.0],#LinRange(4,24,21),
+    regenWindFiles=true,
+    delta_t_turbsim=0.05,
+    simtime_turbsim=30.0,
+    pathtoturbsim=&quot;$(OWENS.OWENSOpenFASTWrappers.OFWpath)/../deps/openfast/build/modules/turbsim/turbsim&quot;,
+    runScript=OWENS.runOWENS)
+
+nothing</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Running DLC 1_1 at Vinf 10.0 m/s
+
+ **************************************************************************************************
+ TurbSim
+
+ Copyright (C) 2024 National Renewable Energy Laboratory
+ Copyright (C) 2024 Envision Energy USA LTD
+
+ This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY.
+ See the &quot;LICENSE&quot; file distributed with this software for details.
+ **************************************************************************************************
+
+  Running TurbSim (from OpenFAST--128-NOTFOUND)
+
+
+  Reading the input file &quot;./turbsimfiles/DLC1_1Vinf10.0.inp&quot;.
+ TS_ValidateInput:A coherent turbulence time step file cannot be generated with the IECKAI model.
+  Calculating the spectral and transfer function matrices:
+     u-component matrices (IEC coherence method)
+     v-component matrices (identity coherence)
+     w-component matrices (identity coherence)
+  Generating time series for all points:
+     u-component
+     v-component
+     w-component
+  Computing hub-height statistics
+  Writing statistics to summary file
+  Generating AeroDyn binary time-series file &quot;./turbsimfiles/DLC1_1Vinf10.0.bts&quot;
+
+  Processing complete.  24.002 CPU seconds used.
+
+  TurbSim terminated normally.
+
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:648
+Opening AeroDyn-Inflow library at: /home/runner/.julia/packages/OWENSOpenFASTWrappers/I4PFf/src/../deps/openfast/build/modules/aerodyn/libaerodyn_inflow_c_binding
+
+ **************************************************************************************************
+ AeroDyn-Inflow library
+
+ Copyright (C) 2024 National Renewable Energy Laboratory
+ Copyright (C) 2024 Envision Energy USA LTD
+
+ This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY.
+ See the &quot;LICENSE&quot; file distributed with this software for details.
+ **************************************************************************************************
+
+ AeroDyn-Inflow library--128-NOTFOUND
+ Compile Info:
+  - Compiler: GCC version 11.4.0
+  - Architecture: 64 bit
+  - Precision: double
+  - OpenMP: Yes, number of threads: 4/4
+  - Date: Sep 10 2024
+  - Time: 01:32:30
+ Execution Info:
+  - Date: 09/10/2024
+  - Time: 01:58:14+0000
+
+ Running ADI.
+ Running AeroDyn.
+ Running OLAF.
+  - Directory:         /home/runner/work/OWENS.jl/OWENS.jl/docs/build/examples
+  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/ExampleB.
+  - Reading advanced options for OLAF:
+ [WARN] Line ignored: &quot;VERT2&quot;   DEFAULT      -10       30.   400     5.      5.     1     5.136    15.136  100
+  - OLAF regularization parameters (for wing 1):
+    WingReg (min/max) :  12.2425 25.2472
+    WakeReg (min/max) :  12.2425 25.2472
+    k = alpha delta nu:   0.0368
+ Running InflowWind.
+
+Blades&#39; Mass Breakout
+CLA_5500 20670.29648289118 kg, 2.06 $/kg: $42580.81075475583
+CBX_2400 9730.417758654583 kg, 2.1 $/kg: $20433.877293174624
+ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
+Airex_C70_55 789.5974763487575 kg, 7.23 $/kg: $5708.7897540015165
+EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
+ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
+Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
+
+Tower Mass Breakout
+CLA_5500 4992.974575844168 kg, 2.06 $/kg: $10285.527626238985
+CBX_2400 1217.5626883060443 kg, 2.1 $/kg: $2556.881645442693
+ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
+Airex_C70_55 0.0 kg, 7.23 $/kg: $0.0
+EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
+ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
+Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
+Total Material Cost Blades: $68723.47780193196
+Total Material Cost Tower: $12842.409271681678
+Total Material Cost: $81565.88707361365
+controlStrategy: normal
+Running Unsteady
+Running in specified rotor speed mode
+
+Simulation Time: 0.0 seconds of 0.99 seconds
+ [INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on
+ subsequent occurences.
+
+Simulation Time: 0.1 seconds of 0.99 seconds
+
+Simulation Time: 0.2 seconds of 0.99 seconds
+
+Simulation Time: 0.3 seconds of 0.99 seconds
+
+Simulation Time: 0.4 seconds of 0.99 seconds
+
+Simulation Time: 0.5 seconds of 0.99 seconds
+
+Simulation Time: 0.6 seconds of 0.99 seconds
+
+Simulation Time: 0.7 seconds of 0.99 seconds
+
+Simulation Time: 0.8 seconds of 0.99 seconds
+
+Simulation Time: 0.9 seconds of 0.99 seconds
+Simulation Complete.
+ &gt;&gt;&gt; FINAL WRITE
+Saving VTK time domain files
+Composite Ultimate and Buckling Safety Factors
+
+
+UPPER BLADE SURFACE
+
+Minimum Safety Factor on Surface: 0.396100421933815
+At time 0.035s at composite station 6 of 21 at lam 6 of 6
+Maximum Damage per hr: 0.32727272730425755
+At composite station 17 of 21 at lam 3 of 6
+
+Spar Cap SF min: 2.7857503051692243
+At time 0.054s at composite station 6 of 21
+Spar Cap Damage max per hour: 9.000000000867082e-6
+At composite station 17 of 21
+
+Leading Edge SF min: 1.1996424522448454
+At time 0.036000000000000004s at composite station 6 of 21
+Leading Edge Damage max per hour: 8.000000000837204e-6
+At composite station 14 of 21
+
+Trailing Edge SF min: 0.396100421933815
+At time 0.035s at composite station 6 of 21
+Trailing Edge Damage max per hour: 7.000000011206093e-6
+At composite station 14 of 21
+
+Fore Panel SF min: 3.6674371585698644
+At time 0.054s at composite station 6 of 21
+Fore Panel Damage max per hour: 9.000000000001686e-6
+At composite station 14 of 21
+
+Aft Panel SF min: 2.3712489724645827
+At time 0.034s at composite station 6 of 21
+Aft Panel Damage max per hour: 6.000000000002889e-6
+At composite station 14 of 21
+
+
+LOWER BLADE SURFACE
+
+Minimum Safety Factor on Surface: 0.39579813639499317
+At time 0.035s at composite station 6 of 21 at lam 6 of 6
+Maximum Damage per hr: 0.4000000000221323
+At composite station 9 of 21 at lam 4 of 6
+
+Spar Cap SF min: 3.4649645886303375
+At time 0.032s at composite station 6 of 21
+Spar Cap Damage max per hour: 6.0000000001931635e-6
+At composite station 14 of 21
+
+Leading Edge SF min: 1.2290347207673296
+At time 0.035s at composite station 6 of 21
+Leading Edge Damage max per hour: 6.000000004065488e-6
+At composite station 14 of 21
+
+Trailing Edge SF min: 0.39579813639499317
+At time 0.035s at composite station 6 of 21
+Trailing Edge Damage max per hour: 7.0000000111829905e-6
+At composite station 14 of 21
+
+Fore Panel SF min: 4.04679589813783
+At time 0.035s at composite station 6 of 21
+Fore Panel Damage max per hour: 6.00000000000124e-6
+At composite station 14 of 21
+
+Aft Panel SF min: 2.2181243360433096
+At time 0.036000000000000004s at composite station 6 of 21
+Aft Panel Damage max per hour: 7.000000001144669e-6
+At composite station 14 of 21
+
+
+UPPER TOWER
+
+Minimum Safety Factor on tower Surface: 2.2804102613223285
+At time 0.099s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.10909090930463705
+At composite station 4 of 21 at lam 1 of 1
+
+
+Lower TOWER
+
+Minimum Safety Factor on tower Surface: 4.331286121960899
+At time 0.035s at composite station 1 of 21 at lam 1 of 1
+Maximum Damage per hr: 0.10909090913969649
+At composite station 18 of 21 at lam 1 of 1
+
+Mass of Turbine: 208897.3537787773 kg</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../installation/">« Installation</a><a class="docs-footer-nextpage" href="../B_detailedInputs/">Detailed Inputs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 10 September 2024 02:08">Tuesday 10 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
