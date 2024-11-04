@@ -313,11 +313,11 @@ Reading SeaState data from /home/runner/work/OWENS.jl/OWENS.jl/examples/literate
   - Architecture: 64 bit
   - Precision: double
   - OpenMP: Yes, number of threads: 4/4
-  - Date: Nov  2 2024
-  - Time: 01:18:32
+  - Date: Nov  4 2024
+  - Time: 20:40:52
  Execution Info:
-  - Date: 11/02/2024
-  - Time: 01:37:57+0000
+  - Date: 11/04/2024
+  - Time: 20:59:53+0000
 
  Running SeaState.
   Generating incident wave kinematics and current time history.
@@ -343,11 +343,11 @@ Reading MoorDyn data from /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/
   - Architecture: 64 bit
   - Precision: double
   - OpenMP: Yes, number of threads: 4/4
-  - Date: Nov  2 2024
-  - Time: 01:18:32
+  - Date: Nov  4 2024
+  - Time: 20:40:52
  Execution Info:
-  - Date: 11/02/2024
-  - Time: 01:38:04+0000
+  - Date: 11/04/2024
+  - Time: 21:00:00+0000
 
  Running MoorDyn (v2.0.0, 2022-12-08).
     This is MoorDyn v2, with significant input file changes from v1.
@@ -363,7 +363,7 @@ Running in specified rotor speed mode
 25.0%┣██████████▊                                ┫ 1/4 [00:00&lt;Inf:Inf, InfGs/it]
 50.0%┣████████████████████████                        ┫ 2/4 [00:05&lt;00:10, 5s/it]
 75.0%┣████████████████████████████████████            ┫ 3/4 [00:09&lt;00:05, 5s/it]
-100.0%┣███████████████████████████████████████████████┫ 4/4 [00:14&lt;00:00, 5s/it]
+100.0%┣███████████████████████████████████████████████┫ 4/4 [00:13&lt;00:00, 4s/it]
 Simulation Complete.</code></pre><p>Since we ran the simulation for such a short time period for sake of demonstrating completion of the simulation, the plots below are not too interesting. Try experimenting with changing the <code>numTS</code> variable above to a longer simulation to see how the floating VAWT responds over time. Note that the platform modeled here is not necessarily design for the Darrieus VAWT it is supporting, so your mileage may vary on the simulation results.</p><pre><code class="language-julia hljs">PyPlot.plot(t, uHist_prp[:, 1])
 PyPlot.title(&quot;Platform Surge Response&quot;)
 PyPlot.xlabel(&quot;Time [s]&quot;)
@@ -374,4 +374,4 @@ PyPlot.xlabel(&quot;Time [s]&quot;)
 PyPlot.ylabel(&quot;Force [N]&quot;)
 PyPlot.title(&quot;Hydrodynamic Surge Loading&quot;)
 
-nothing</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../C_customizablePreprocessing/">« Customizable Preprocessing</a><a class="docs-footer-nextpage" href="../../OWENS_Dev_Guide/">Developer Guide »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Saturday 2 November 2024 01:38">Saturday 2 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+nothing</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../C_customizablePreprocessing/">« Customizable Preprocessing</a><a class="docs-footer-nextpage" href="../../OWENS_Dev_Guide/">Developer Guide »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Monday 4 November 2024 21:00">Monday 4 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
