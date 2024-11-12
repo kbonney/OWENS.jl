@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Detailed Inputs · OWENS.jl</title><meta name="title" content="Detailed Inputs · OWENS.jl"/><meta property="og:title" content="Detailed Inputs · OWENS.jl"/><meta property="twitter:title" content="Detailed Inputs · OWENS.jl"/><meta name="description" content="Documentation for OWENS.jl."/><meta property="og:description" content="Documentation for OWENS.jl."/><meta property="twitter:description" content="Documentation for OWENS.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">OWENS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../A_simplyRunningOWENS/">Simply Running OWENS</a></li><li class="is-active"><a class="tocitem" href>Detailed Inputs</a></li><li><a class="tocitem" href="../C_customizablePreprocessing/">Customizable Preprocessing</a></li><li><a class="tocitem" href="../D_simulatingFloatingPlatforms/">Simulating Floating Platforms</a></li></ul></li><li><a class="tocitem" href="../../OWENS_Dev_Guide/">Developer Guide</a></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../reference/reference/">OWENS</a></li><li><a class="tocitem" href="../../reference/referenceAero/">OWENSAero</a></li><li><a class="tocitem" href="../../reference/referenceFEA/">OWENSFEA</a></li><li><a class="tocitem" href="../../reference/referenceOpenFASTWrappers/">OWENSOpenFASTWrappers</a></li><li><a class="tocitem" href="../../reference/referencePreComp/">OWENSPreComp</a></li></ul></li><li><a class="tocitem" href="../../legacyUserGuide/">Legacy User Guide</a></li><li><a class="tocitem" href="../../VAWTGenUserGuide/">Legacy VAWTGen Guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Detailed Inputs</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Detailed Inputs</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="simple2"><a class="docs-heading-anchor" href="#simple2">Detailed Inputs</a><a id="simple2-1"></a><a class="docs-heading-anchor-permalink" href="#simple2" title="Permalink"></a></h1><p>In this example, we show the second level of what is going on behind the precompiled binary This would be appropriate if you need more customization in the run and design parameters than the input file currently allows, but your design still fits within the setupOWENS helper function etc.</p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>This example is also available as a Jupyter notebook todo: get link working:</p></div></div><p>First we import the packages.  If &quot;using&quot; was employed, then all of the functions of the packages specified would be made available, but &quot;import&quot; requires PackageName.FunctionName to be used unless the function was explicitely exported in the package.  If &quot;include(&quot;filepath/filename.jl)&quot; is used, that is the same as copying and pasting.  Please see the respective page on YAML input (TODO) for a description of the YAML inputs</p><pre><code class="language-julia hljs">import OWENS
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Detailed Inputs · OWENS.jl</title><meta name="title" content="Detailed Inputs · OWENS.jl"/><meta property="og:title" content="Detailed Inputs · OWENS.jl"/><meta property="twitter:title" content="Detailed Inputs · OWENS.jl"/><meta name="description" content="Documentation for OWENS.jl."/><meta property="og:description" content="Documentation for OWENS.jl."/><meta property="twitter:description" content="Documentation for OWENS.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">OWENS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../indepth_installation/">Installation</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../A_simplyRunningOWENS/">Simply Running OWENS</a></li><li class="is-active"><a class="tocitem" href>Detailed Inputs</a></li><li><a class="tocitem" href="../C_customizablePreprocessing/">Customizable Preprocessing</a></li><li><a class="tocitem" href="../D_simulatingFloatingPlatforms/">Simulating Floating Platforms</a></li></ul></li><li><a class="tocitem" href="../../OWENS_Dev_Guide/">Developer Guide</a></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../reference/reference/">OWENS</a></li><li><a class="tocitem" href="../../reference/referenceAero/">OWENSAero</a></li><li><a class="tocitem" href="../../reference/referenceFEA/">OWENSFEA</a></li><li><a class="tocitem" href="../../reference/referenceOpenFASTWrappers/">OWENSOpenFASTWrappers</a></li><li><a class="tocitem" href="../../reference/referencePreComp/">OWENSPreComp</a></li></ul></li><li><a class="tocitem" href="../../legacyUserGuide/">Legacy User Guide</a></li><li><a class="tocitem" href="../../VAWTGenUserGuide/">Legacy VAWTGen Guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Detailed Inputs</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Detailed Inputs</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="simple2"><a class="docs-heading-anchor" href="#simple2">Detailed Inputs</a><a id="simple2-1"></a><a class="docs-heading-anchor-permalink" href="#simple2" title="Permalink"></a></h1><p>In this example, we show the second level of what is going on behind the precompiled binary This would be appropriate if you need more customization in the run and design parameters than the input file currently allows, but your design still fits within the setupOWENS helper function etc.</p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>This example is also available as a Jupyter notebook todo: get link working:</p></div></div><p>First we import the packages.  If &quot;using&quot; was employed, then all of the functions of the packages specified would be made available, but &quot;import&quot; requires PackageName.FunctionName to be used unless the function was explicitely exported in the package.  If &quot;include(&quot;filepath/filename.jl)&quot; is used, that is the same as copying and pasting.  Please see the respective page on YAML input (TODO) for a description of the YAML inputs</p><pre><code class="language-julia hljs">import OWENS
 import OWENSAero
 #### import PyPlot
 runpath = path = &quot;/home/runner/work/OWENS.jl/OWENS.jl/examples/literate&quot; # to run locally, change to splitdir(@__FILE__)[1]
@@ -113,7 +113,7 @@ nothing</code></pre><pre class="documenter-example-output"><code class="nohighli
 └ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
 ┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
 └ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-Opening AeroDyn-Inflow library at: /home/runner/.julia/packages/OWENSOpenFASTWrappers/OOzCv/src/../deps/openfast/build/modules/aerodyn/libaerodyn_inflow_c_binding
+Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee668f59fa694053de285aeb6d77f/lib/libaerodyn_inflow_c_binding.so
 
  **************************************************************************************************
  AeroDyn-Inflow library
@@ -125,17 +125,17 @@ Opening AeroDyn-Inflow library at: /home/runner/.julia/packages/OWENSOpenFASTWra
  See the &quot;LICENSE&quot; file distributed with this software for details.
  **************************************************************************************************
 
- AeroDyn-Inflow library--128-NOTFOUND
+ AeroDyn-Inflow library-v2.5.0-3490-g24c05a74
  Compile Info:
-  - Compiler: GCC version 11.4.0
+  - Compiler: GCC version 8.1.0
   - Architecture: 64 bit
   - Precision: double
-  - OpenMP: Yes, number of threads: 4/4
-  - Date: Nov  4 2024
-  - Time: 20:40:52
+  - OpenMP: No
+  - Date: Nov  5 2024
+  - Time: 02:19:23
  Execution Info:
-  - Date: 11/04/2024
-  - Time: 20:57:38+0000
+  - Date: 11/12/2024
+  - Time: 19:21:44+0000
 
  Running ADI.
  Running AeroDyn.
@@ -236,54 +236,54 @@ Running in specified rotor speed mode
 2.0%┣▉                                          ┫ 1/49 [00:00&lt;Inf:Inf, InfGs/it]
  [INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on
  subsequent occurences.
-4.1%┣██                                              ┫ 2/49 [00:02&lt;01:49, 2s/it]
-6.1%┣███                                             ┫ 3/49 [00:04&lt;01:23, 2s/it]
-8.2%┣████                                            ┫ 4/49 [00:05&lt;01:08, 2s/it]
-10.2%┣████▉                                          ┫ 5/49 [00:06&lt;01:01, 1s/it]
-12.2%┣█████▊                                         ┫ 6/49 [00:06&lt;00:56, 1s/it]
-14.3%┣██████▊                                        ┫ 7/49 [00:07&lt;00:52, 1s/it]
-16.3%┣███████▊                                       ┫ 8/49 [00:09&lt;00:50, 1s/it]
-18.4%┣████████▋                                      ┫ 9/49 [00:10&lt;00:49, 1s/it]
-20.4%┣█████████▍                                    ┫ 10/49 [00:11&lt;00:47, 1s/it]
-22.4%┣██████████▎                                   ┫ 11/49 [00:12&lt;00:45, 1s/it]
-24.5%┣███████████▎                                  ┫ 12/49 [00:13&lt;00:43, 1s/it]
-26.5%┣████████████▏                                 ┫ 13/49 [00:14&lt;00:42, 1s/it]
-28.6%┣█████████████▏                                ┫ 14/49 [00:15&lt;00:41, 1s/it]
-30.6%┣██████████████                                ┫ 15/49 [00:16&lt;00:39, 1s/it]
-32.7%┣███████████████                               ┫ 16/49 [00:17&lt;00:36, 1s/it]
-34.7%┣████████████████                              ┫ 17/49 [00:18&lt;00:35, 1s/it]
-36.7%┣█████████████████                             ┫ 18/49 [00:18&lt;00:33, 1s/it]
-38.8%┣█████████████████▉                            ┫ 19/49 [00:19&lt;00:32, 1s/it]
-40.8%┣██████████████████▊                           ┫ 20/49 [00:20&lt;00:30, 1s/it]
-42.9%┣███████████████████▊                          ┫ 21/49 [00:21&lt;00:29, 1s/it]
-44.9%┣████████████████████▋                         ┫ 22/49 [00:22&lt;00:28, 1s/it]
-46.9%┣█████████████████████▋                        ┫ 23/49 [00:22&lt;00:26, 1s/it]
-49.0%┣██████████████████████▌                       ┫ 24/49 [00:23&lt;00:25, 1s/it]
-51.0%┣███████████████████████▌                      ┫ 25/49 [00:24&lt;00:24, 1s/it]
-53.1%┣████████████████████████▍                     ┫ 26/49 [00:25&lt;00:23, 1it/s]
-55.1%┣█████████████████████████▍                    ┫ 27/49 [00:26&lt;00:22, 1it/s]
-57.1%┣██████████████████████████▎                   ┫ 28/49 [00:27&lt;00:21, 1s/it]
-59.2%┣███████████████████████████▎                  ┫ 29/49 [00:28&lt;00:20, 1it/s]
-61.2%┣████████████████████████████▏                 ┫ 30/49 [00:29&lt;00:19, 1it/s]
-63.3%┣█████████████████████████████                 ┫ 31/49 [00:30&lt;00:18, 1it/s]
-65.3%┣██████████████████████████████                ┫ 32/49 [00:31&lt;00:17, 1it/s]
-67.3%┣███████████████████████████████               ┫ 33/49 [00:32&lt;00:16, 1it/s]
-69.4%┣████████████████████████████████              ┫ 34/49 [00:33&lt;00:15, 1s/it]
-71.4%┣████████████████████████████████▉             ┫ 35/49 [00:34&lt;00:14, 1s/it]
-73.5%┣█████████████████████████████████▉            ┫ 36/49 [00:35&lt;00:13, 1s/it]
-75.5%┣██████████████████████████████████▊           ┫ 37/49 [00:36&lt;00:12, 1s/it]
-77.6%┣███████████████████████████████████▊          ┫ 38/49 [00:38&lt;00:11, 1s/it]
-79.6%┣████████████████████████████████████▋         ┫ 39/49 [00:39&lt;00:10, 1s/it]
-81.6%┣█████████████████████████████████████▌        ┫ 40/49 [00:40&lt;00:09, 1s/it]
-83.7%┣██████████████████████████████████████▌       ┫ 41/49 [00:41&lt;00:08, 1s/it]
-85.7%┣███████████████████████████████████████▍      ┫ 42/49 [00:43&lt;00:07, 1s/it]
-87.8%┣████████████████████████████████████████▍     ┫ 43/49 [00:44&lt;00:06, 1s/it]
-89.8%┣█████████████████████████████████████████▎    ┫ 44/49 [00:45&lt;00:05, 1s/it]
-91.8%┣██████████████████████████████████████████▎   ┫ 45/49 [00:47&lt;00:04, 1s/it]
-93.9%┣███████████████████████████████████████████▏  ┫ 46/49 [00:48&lt;00:03, 1s/it]
-95.9%┣████████████████████████████████████████████▏ ┫ 47/49 [00:49&lt;00:02, 1s/it]
-98.0%┣█████████████████████████████████████████████ ┫ 48/49 [00:51&lt;00:01, 1s/it]
-100.0%┣█████████████████████████████████████████████┫ 49/49 [00:52&lt;00:00, 1s/it]
+4.1%┣██                                              ┫ 2/49 [00:02&lt;01:43, 2s/it]
+6.1%┣███                                             ┫ 3/49 [00:03&lt;01:16, 2s/it]
+8.2%┣████                                            ┫ 4/49 [00:04&lt;01:02, 1s/it]
+10.2%┣████▉                                          ┫ 5/49 [00:05&lt;00:54, 1s/it]
+12.2%┣█████▊                                         ┫ 6/49 [00:06&lt;00:49, 1s/it]
+14.3%┣██████▊                                        ┫ 7/49 [00:07&lt;00:46, 1s/it]
+16.3%┣███████▊                                       ┫ 8/49 [00:07&lt;00:43, 1s/it]
+18.4%┣████████▋                                      ┫ 9/49 [00:08&lt;00:41, 1s/it]
+20.4%┣█████████▍                                    ┫ 10/49 [00:09&lt;00:40, 1s/it]
+22.4%┣██████████▎                                   ┫ 11/49 [00:10&lt;00:39, 1s/it]
+24.5%┣███████████▎                                  ┫ 12/49 [00:11&lt;00:37, 1s/it]
+26.5%┣████████████▏                                 ┫ 13/49 [00:12&lt;00:36, 1it/s]
+28.6%┣█████████████▏                                ┫ 14/49 [00:13&lt;00:34, 1it/s]
+30.6%┣██████████████                                ┫ 15/49 [00:13&lt;00:33, 1it/s]
+32.7%┣███████████████                               ┫ 16/49 [00:14&lt;00:31, 1it/s]
+34.7%┣████████████████                              ┫ 17/49 [00:15&lt;00:29, 1it/s]
+36.7%┣█████████████████                             ┫ 18/49 [00:15&lt;00:28, 1it/s]
+38.8%┣█████████████████▉                            ┫ 19/49 [00:16&lt;00:26, 1it/s]
+40.8%┣██████████████████▊                           ┫ 20/49 [00:17&lt;00:25, 1it/s]
+42.9%┣███████████████████▊                          ┫ 21/49 [00:17&lt;00:24, 1it/s]
+44.9%┣████████████████████▋                         ┫ 22/49 [00:18&lt;00:23, 1it/s]
+46.9%┣█████████████████████▋                        ┫ 23/49 [00:19&lt;00:22, 1it/s]
+49.0%┣██████████████████████▌                       ┫ 24/49 [00:19&lt;00:21, 1it/s]
+51.0%┣███████████████████████▌                      ┫ 25/49 [00:20&lt;00:20, 1it/s]
+53.1%┣████████████████████████▍                     ┫ 26/49 [00:20&lt;00:19, 1it/s]
+55.1%┣█████████████████████████▍                    ┫ 27/49 [00:21&lt;00:18, 1it/s]
+57.1%┣██████████████████████████▎                   ┫ 28/49 [00:22&lt;00:17, 1it/s]
+59.2%┣███████████████████████████▎                  ┫ 29/49 [00:22&lt;00:16, 1it/s]
+61.2%┣████████████████████████████▏                 ┫ 30/49 [00:23&lt;00:15, 1it/s]
+63.3%┣█████████████████████████████                 ┫ 31/49 [00:24&lt;00:14, 1it/s]
+65.3%┣██████████████████████████████                ┫ 32/49 [00:24&lt;00:13, 1it/s]
+67.3%┣███████████████████████████████               ┫ 33/49 [00:25&lt;00:13, 1it/s]
+69.4%┣████████████████████████████████              ┫ 34/49 [00:26&lt;00:12, 1it/s]
+71.4%┣████████████████████████████████▉             ┫ 35/49 [00:27&lt;00:11, 1it/s]
+73.5%┣█████████████████████████████████▉            ┫ 36/49 [00:27&lt;00:10, 1it/s]
+75.5%┣██████████████████████████████████▊           ┫ 37/49 [00:28&lt;00:09, 1it/s]
+77.6%┣███████████████████████████████████▊          ┫ 38/49 [00:29&lt;00:09, 1it/s]
+79.6%┣████████████████████████████████████▋         ┫ 39/49 [00:29&lt;00:08, 1it/s]
+81.6%┣█████████████████████████████████████▌        ┫ 40/49 [00:30&lt;00:07, 1it/s]
+83.7%┣██████████████████████████████████████▌       ┫ 41/49 [00:31&lt;00:06, 1it/s]
+85.7%┣███████████████████████████████████████▍      ┫ 42/49 [00:31&lt;00:05, 1it/s]
+87.8%┣████████████████████████████████████████▍     ┫ 43/49 [00:32&lt;00:05, 1it/s]
+89.8%┣█████████████████████████████████████████▎    ┫ 44/49 [00:33&lt;00:04, 1it/s]
+91.8%┣██████████████████████████████████████████▎   ┫ 45/49 [00:34&lt;00:03, 1it/s]
+93.9%┣███████████████████████████████████████████▏  ┫ 46/49 [00:35&lt;00:02, 1it/s]
+95.9%┣████████████████████████████████████████████▏ ┫ 47/49 [00:35&lt;00:02, 1it/s]
+98.0%┣█████████████████████████████████████████████ ┫ 48/49 [00:36&lt;00:01, 1it/s]
+100.0%┣█████████████████████████████████████████████┫ 49/49 [00:37&lt;00:00, 1it/s]
 Simulation Complete.
  &gt;&gt;&gt; FINAL WRITE</code></pre><p>Like described above, we can output vtk files viewable in paraview.  Here it is done for each time step and shows the deformations.  Additionaly, there is a method to input custom values and have them show up on the vtk surface mesh for example, strain, or reaction force, etc.  This is described in more detail in the api reference for the function and: TODO</p><pre><code class="language-julia hljs">println(&quot;Saving VTK time domain files&quot;)
 OWENS.OWENSFEA_VTK(&quot;$path/vtk/SNLARCUS5MW_timedomain_TNBnltrue&quot;,t,uHist,system,assembly,sections;scaling=1,azi=aziHist)
@@ -310,31 +310,31 @@ nothing</code></pre><pre class="documenter-example-output"><code class="nohighli
 
 UPPER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.592858083963153
+Minimum Safety Factor on Surface: 3.5925325913195074
 At time 0.045s at composite station 5 of 21 at lam 4 of 6
-Maximum Damage per hr: 1.1755102042134218
+Maximum Damage per hr: 1.1755102042134247
 At composite station 17 of 21 at lam 3 of 6
 
 
 LOWER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.906653205030281
+Minimum Safety Factor on Surface: 3.9068766912221387
 At time 0.02s at composite station 5 of 21 at lam 6 of 6
-Maximum Damage per hr: 1.1755102040872372
+Maximum Damage per hr: 1.1755102040872376
 At composite station 20 of 21 at lam 3 of 6
 
 
 UPPER TOWER
 
-Minimum Safety Factor on tower Surface: 22.09347192741612
+Minimum Safety Factor on tower Surface: 22.0915701425071
 At time 0.017s at composite station 18 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.14693877554709528
+Maximum Damage per hr: 0.14693877554709464
 At composite station 3 of 21 at lam 1 of 1
 
 
 Lower TOWER
 
-Minimum Safety Factor on tower Surface: 5.036178075369027
+Minimum Safety Factor on tower Surface: 5.036128306917067
 At time 0.049s at composite station 1 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.14693877571812286
-At composite station 1 of 21 at lam 1 of 1</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../A_simplyRunningOWENS/">« Simply Running OWENS</a><a class="docs-footer-nextpage" href="../C_customizablePreprocessing/">Customizable Preprocessing »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Monday 4 November 2024 21:00">Monday 4 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Maximum Damage per hr: 0.14693877571812486
+At composite station 1 of 21 at lam 1 of 1</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../A_simplyRunningOWENS/">« Simply Running OWENS</a><a class="docs-footer-nextpage" href="../C_customizablePreprocessing/">Customizable Preprocessing »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 12 November 2024 19:24">Tuesday 12 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
