@@ -1,0 +1,9 @@
+,,,,Ex,Ey,Ez,Gxy,Gyz,Gxz,prxy,pryz,prxz,,,,,,,,,
+,,Type,Layer Thickness,E11,E22,,G12,,,nu12,,,density,UTSx,UCSx,UTSy,UCSy,UTSz,UCSz,Cost,Reference
+Material ID,,,[mm],[MPa],[MPa],[MPa],[MPa],[MPa],[MPa],[-],[-],[-],[kg/m3],[MPa],[MPa],[MPa],[MPa],[MPa],[MPa],[$/kg],
+1,ELX-1950,orthotropic,1,41300,16800,16800,3300,3300,3300,.263,.263,.35,1950,1002,-637,66,-142,33,-39,2.06,Uni E-glass
+2,EBX-1920,orthotropic,1,11100,11100,16100,12600,3300,3300,.263,.263,.5,1920,80,-123,80,-123,33,-39,2.10,Biax E-glass
+3,ETX-1840,orthotropic,1,21800,15100,15100,9500,3300,3300,.263,.263,.5,1840,758,-597,133,-304,33,-39,2.21,Triax E-Blass
+4,PX35-1600,orthotropic,1,157600,9100,9100,400,4000,3500,.318,.318,.318,1600,2236,-1528,66,-143,33,-39,16.44,Uni Carbon Pultrusion
+5,Balsa,orthotropic,1,100,100,3570,160,160,160,.26,.26,.26,590,100,-100,100,-100,100,-100,1,Balsa
+6,Foam,orthotropic,1,50,50,50,50,50,50,.3,.3,.3,590,100,-100,100,-100,100,-100,7.23,Foam
