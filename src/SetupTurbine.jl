@@ -55,7 +55,8 @@ function setupOWENS(OWENSAero,path;
     meshtype = "Darrieus",
     custommesh = nothing,
     AddedMass_Coeff_Ca = 0.0,
-    verbosity=0) #Darrieus, H-VAWT, ARCUS
+    verbosity=0,
+    isHAWT=false) #Darrieus, H-VAWT, ARCUS
     
     custom_mesh_outputs = []
 
@@ -135,7 +136,8 @@ function setupOWENS(OWENSAero,path;
             angularOffset, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
             AD15_ccw = true,
             verbosity, # 0 nothing, 1 basic, 2 lots: amount of printed information
-            connectBldTips2Twr)
+            connectBldTips2Twr,
+            isHAWT)
     elseif custommesh != nothing
         mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs = custommesh(;Htwr_base,
         Htwr_blds,
@@ -631,7 +633,7 @@ function setupOWENS(OWENSAero,path;
                 nacPos=[[0,0,0]],
                 adi_nstrut=[Nstrutperbld],
                 adi_debug=0,
-                isHAWT = false     # true for HAWT, false for crossflow or VAWT
+                isHAWT=false,     # true for HAWT, false for crossflow or VAWT
                 )
 
         aeroForcesAD(t,azi) = OWENS.mapAD15(t,azi,[mymesh],OWENSOpenFASTWrappers.advanceAD15;alwaysrecalc=true,verbosity=1)

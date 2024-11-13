@@ -284,7 +284,8 @@ Htwr_blds = 147.148-15.0,
     angularOffset = 0.0, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
     AD15_ccw = false,
     verbosity=0, # 0 nothing, 1 basic, 2 lots: amount of printed information
-    connectBldTips2Twr =true)
+    connectBldTips2Twr = true,
+    isHAWT=false)
 
 Standard Mesh Matching 5MW, 34m configurations
 
@@ -306,7 +307,8 @@ Standard Mesh Matching 5MW, 34m configurations
 * `AD15_ccw::boolean`: Use AD15 convention of VAWT counter-clockwise with blade root at top (blade points down)
 * `AD15hubR::float`: AD15 has a hub radius, so the struts do not go all the way to the center of the axis of rotation, while the structural mesh does.
 # `verbosity::int`: 0 nothing, 1 basic, 2 lots: amount of printed information 
-* `connectBldTips2Twr::book`: True for Darrieus style, false for H-VAWT, but the blade shapes should be appropriate
+* `connectBldTips2Twr::bool`: True for Darrieus style, false for H-VAWT, but the blade shapes should be appropriate
+* `isHAWT::bool`: true for HAWT
 
 #Outputs
 * `mymesh::OWENSFEA.Mesh`: see ?OWENSFEA.Mesh
@@ -332,7 +334,8 @@ function create_mesh_struts(;Htwr_base = 15.0,
     angularOffset = 0.0, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
     AD15_ccw = false,
     verbosity = 0, # 0 nothing, 1 basic, 2 lots: amount of printed information
-    connectBldTips2Twr = true)
+    connectBldTips2Twr = true,
+    isHAWT=false)
 
     Nstrut = length(strut_bld_mountpoint)
 
@@ -592,7 +595,7 @@ function create_mesh_struts(;Htwr_base = 15.0,
     jointconn = zeros(Int,njoint,2)
     jointtype = zeros(njoint)
     for ibld = 1:nblade
-        if connectBldTips2Twr
+        if connectBldTips2Twr || isHAWT
             # connect tower to blades
             jointconn[ibld,:] = [t_botidx b_botidx[ibld]]
         end
@@ -602,7 +605,7 @@ function create_mesh_struts(;Htwr_base = 15.0,
             jointconn[ibld+nblade*istrut,:] = [t2s_idx[istrut] s2t_idx[ibld,istrut]]
         end
 
-        if connectBldTips2Twr
+        if connectBldTips2Twr && !isHAWT
             # connect tower to blades tops
             jointconn[ibld+nblade*(Nstrut+1),:] = [t_topidx b_topidx[ibld]]
         end

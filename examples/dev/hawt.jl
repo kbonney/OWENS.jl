@@ -14,104 +14,102 @@ plot_cycle=["#348ABD", "#A60628", "#009E73", "#7A68A6", "#D55E00", "#CC79A7"]
 
 import OWENS
 import OWENSAero
-import GXBeam
+import FLOWMath
 
 path,_ = splitdir(@__FILE__)
 
-# include("$(path)/../../../../OWENS.jl/src/OWENS.jl")
-# include("$(path)/../src/OWENS.jl")
-# include("$(path)/setupOWENShawt.jl")
-println("Set up Macro Geometry/Inputs")
-rho = 1.225
-Nslices = 30
-ntheta = 30
-RPM = 7.8
-Vinf = 20.0
-eta = 0.5
-B = Nbld = 3
-R = 110.51 #m
-H = 1.02*R*2 #m
+# R_root = 0.001 # m biwing radius
+# R_biwing = 20.0*3 # outer radius
+# R_tip = 40.0*3 # outer radius
+# nbelem_root = 5 #biwing elements for each 
+# nbelem_biwing = 5 #tip elements
+# nbelem_tip = 5 #tip elements
+
+# N_control = 5
+# bshapex_root = LinRange(0.0,R_root,N_control) #Blade shape, magnitude is relevant
+# bshapez_root = zeros(N_control) #Blade shape, magnitude is relevant
+# bshapex_biwing_U = LinRange(R_root,R_biwing,N_control) #Blade shape, magnitude is relevant
+# bshapez_biwing_U = [0.0,2.0,2.0,1.0,0.0] #Blade shape, magnitude is relevant
+# bshapex_biwing_L = LinRange(R_root,R_biwing,N_control) #Blade shape, magnitude is relevant
+# bshapez_biwing_L = [-12.0,-8.0,-6.0,-4.0,0.0] #Blade shape, magnitude is relevant
+# bshapex_tip = LinRange(R_biwing,R_tip,N_control) #Blade shape, magnitude is relevant
+# bshapez_tip = zeros(N_control) #Blade shape, magnitude is relevant
+
+# bladelen = sum(sqrt.((shapeX[2:end].-shapeX[1:end-1]).^2 .+ (shapeY[2:end].-shapeY[1:end-1]).^2 ))
+# println("bladelen: $bladelen")
+
 
 ntelem = 20 #tower elements
 nbelem = 60 #blade elements
-ncelem = 10
+nselem = 10
 
+delta_t=0.05
+numTS=10
+Nbld = 3
+Blade_Height = 5.0
+Blade_Radius = 100.0
+RPM= 10.0
+Vinf = 10.0
+eta = 0.5
+AModel="AD"
+structuralModel = "GX"
 
-shapeX = LinRange(0,R,Nslices+1)
-shapeY = zero(shapeX)
+shapeZ = [0,0.45,0.89,0.9,1].*Blade_Height
+shapeX = [0.0,0.125,0.25,0.26,1].*Blade_Radius
 
-R_root = 0.001 # m biwing radius
-R_biwing = 20.0*3 # outer radius
-R_tip = 40.0*3 # outer radius
-nbelem_root = 5 #biwing elements for each 
-nbelem_biwing = 5 #tip elements
-nbelem_tip = 5 #tip elements
+spline_Z = LinRange(shapeZ[1],shapeZ[end],100)
+spline_X = FLOWMath.akima(shapeZ,shapeX,spline_Z)
 
-N_control = 5
-bshapex_root = LinRange(0.0,R_root,N_control) #Blade shape, magnitude is relevant
-bshapez_root = zeros(N_control) #Blade shape, magnitude is relevant
-bshapex_biwing_U = LinRange(R_root,R_biwing,N_control) #Blade shape, magnitude is relevant
-bshapez_biwing_U = [0.0,2.0,2.0,1.0,0.0] #Blade shape, magnitude is relevant
-bshapex_biwing_L = LinRange(R_root,R_biwing,N_control) #Blade shape, magnitude is relevant
-bshapez_biwing_L = [-12.0,-8.0,-6.0,-4.0,0.0] #Blade shape, magnitude is relevant
-bshapex_tip = LinRange(R_biwing,R_tip,N_control) #Blade shape, magnitude is relevant
-bshapez_tip = zeros(N_control) #Blade shape, magnitude is relevant
-
-bladelen = sum(sqrt.((shapeX[2:end].-shapeX[1:end-1]).^2 .+ (shapeY[2:end].-shapeY[1:end-1]).^2 ))
-println("bladelen: $bladelen")
-
+PyPlot.figure()
+PyPlot.plot(shapeX,shapeZ,".-")
+PyPlot.plot(spline_X,spline_Z,".-")
 
 mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
-    stiff_twr, stiff_bld,bld_precompinput,
-    bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
-    twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForces,
-    mass_breakout_blds,mass_breakout_twr,bladeIdx,bladeElem,system,assembly,sections = OWENS.setupOWENShawt(OWENSAero,path;
-    rho,
-    Nslices,
-    ntheta,
+stiff_twr, stiff_bld,bld_precompinput,
+bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForces,deformAero,
+mass_breakout_blds,mass_breakout_twr,system, assembly, sections,AD15bldNdIdxRng, AD15bldElIdxRng = OWENS.setupOWENS(OWENSAero,path;
+    rho=1.225,
+    Nslices=10,
+    ntheta=30,
     RPM,
     Vinf,
     eta,
     B = Nbld,
-    H = 5.0,
-    R = 2.5,
-    hubR = 2.0,
-    shapeZ = shapeY,
-    shapeX,#shapeX_spline(shapeZ)
-    ifw=false,
+    H = Blade_Height,
+    R = Blade_Radius,
+    shapeZ,
+    shapeX,
+    shapeY = zero(shapeX),
+    ifw=true,
+    delta_t,
+    numTS,
+    adi_lib=nothing,
+    adi_rootname="$path/biwing",
+    AD15hubR = 1.0,
     windINPfilename="$(path)/data/turbsim/350mx350m_30x30_20msETM.bts",
-    ifw_libfile = nothing,
+    ifw_libfile=nothing,
     NuMad_geom_xlscsv_file_twr = "$path/data/NuMAD_Geom_ARCUS330m_tower_DecDesign_noprebend_biwing.csv",
     NuMad_mat_xlscsv_file_twr = "$path/data/NuMAD_Materials_ARCUS330m_DecDesign.csv",
     NuMad_geom_xlscsv_file_bld = "$path/data/NuMAD_Geom_ARCUS330m_blades_DecDesign_noprebend_biwing.csv",
     NuMad_mat_xlscsv_file_bld = "$path/data/NuMAD_Materials_ARCUS330m_DecDesign.csv",
+    NuMad_geom_xlscsv_file_strut = ["$path/data/NuMAD_Geom_SNL_5MW_Struts.csv"],
+    NuMad_mat_xlscsv_file_strut = "$path/data/NuMAD_Materials_ARCUS330m_DecDesign.csv",
     Htwr_base=10.0,
-    ntelem, #tower elements
-    nbelem, #blade elements
-    ncelem,
-    stack_layers_scale = [4.0,4.0],
+    ntelem, 
+    nbelem, 
+    ncelem=5,
+    nselem,
     joint_type = 0,
-    c_mount_ratio = 0.05,
-    AModel="DMS",
+    strut_twr_mountpoint = [0.89],
+    strut_bld_mountpoint = [0.89],
+    AModel, #AD, DMS, AC
     DSModel="BV",
     RPI=true,
-    biwing=true,
-    hub_depth = 15.0, #Hub Beam Depth
-    R_root,
-    R_biwing,
-    R_tip,
-    nbelem_root,
-    nbelem_biwing,
-    nbelem_tip,
-    bshapex_root,
-    bshapez_root,
-    bshapex_biwing_U,
-    bshapez_biwing_U,
-    bshapex_biwing_L,
-    bshapez_biwing_L,
-    bshapex_tip,
-    bshapez_tip,
-    )
+    cables_connected_to_blade_base = true,
+    angularOffset = 0.0,
+    meshtype = "Darrieus",
+    isHAWT=true)
 
 
 PyPlot.figure()
@@ -151,47 +149,8 @@ for (i,name) in enumerate(plyprops_bld.names)
 end
 
 ######################################
-#### Perform Aerostructural One Way Test
+#### AeroElastic
 #######################################
-
-println("Saving VTK time domain files")
-userPointNames=["EA","EIyy","EIzz","Fx","Fy","Fz","Mx","My","Mz"]
-t = [0,1]
-
-# map el props to points using con
-userPointData = zeros(length(userPointNames),length(t),mymesh.numNodes)
-EA_points = zeros(mymesh.numNodes)
-EIyy_points = zeros(mymesh.numNodes)
-EIzz_points = zeros(mymesh.numNodes)
-
-# # Time-invariant data
-# for iel = 1:length(myel.props)
-#     nodes = mymesh.conn[iel,:]
-#     EA_points[Int.(nodes)] = myel.props[iel].EA
-#     EIyy_points[Int.(nodes)] = myel.props[iel].EIyy
-#     EIzz_points[Int.(nodes)] = myel.props[iel].EIzz
-# end
-
-# # fill in the big matrix
-# for it = 1:length(t)
-
-#     userPointData[1,it,:] = EA_points
-#     userPointData[2,it,:] = EIyy_points
-#     userPointData[3,it,:] = EIzz_points
-#     # userPointData[4,it,:] = FReactionHist[it,1:6:end]
-#     # userPointData[5,it,:] = FReactionHist[it,2:6:end]
-#     # userPointData[6,it,:] = FReactionHist[it,3:6:end]
-#     # userPointData[7,it,:] = FReactionHist[it,4:6:end]
-#     # userPointData[8,it,:] = FReactionHist[it,5:6:end]
-#     # userPointData[9,it,:] = FReactionHist[it,6:6:end]
-# end
-
-azi=[0.0,pi/8]#./aziHist*1e-6
-uHist = [zeros(mymesh.numNodes*6) zeros(mymesh.numNodes*6)]'
-saveName = "$path/vtk/HAWTBiwingpleasework"
-OWENS.OWENSFEA_VTK(saveName,t,uHist,system,assembly,sections;scaling=1,azi,userPointNames,userPointData)
-
-
 # node, dof, bc
 pBC = [1 1 0
 1 2 0
@@ -200,13 +159,78 @@ pBC = [1 1 0
 1 5 0
 1 6 0]
 
-# filename = "$(path)/data/newmesh_34m"
-# OWENS.saveOWENSfiles(filename,mymesh,myort,myjoint,myel,pBC,numadIn_bld)
+if AModel=="AD"
+    AD15On = true
+else
+    AD15On = false
+end
+
+tocp = [0.0,100000.1]
+Omegaocp = [RPM,RPM] ./ 60
+tocp_Vinf = [0.0,100000.1]
+Vinfocp = [Vinf,Vinf]
+
+inputs = OWENS.Inputs(;analysisType = structuralModel,
+tocp,
+Omegaocp,
+tocp_Vinf,
+Vinfocp,
+numTS,
+delta_t,
+AD15On,
+aeroLoadsOn = 2)
+
+nothing
+
+# Then there are inputs for the finite element models, also, please see the api reference for specifics on the options (TODO: ensure that this is propogated to the docs)
+
+feamodel = OWENS.FEAModel(;analysisType = structuralModel,
+outFilename = "none",
+joint = myjoint,
+platformTurbineConnectionNodeNumber = 1,
+pBC,
+nlOn = false,
+gravityOn = [0,-9.81,0],
+numNodes = mymesh.numNodes,
+RayleighAlpha = 0.05,
+RayleighBeta = 0.05,
+iterationType = "DI")
+
+nothing
+
+# Here is where we actually call the unsteady simulation and where owens pulls the aero and structural solutions together
+# and propogates things in time.
+
+println("Running Unsteady")
+t, aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,FReactionHist,
+FTwrBsHist,genTorque,genPower,torqueDriveShaft,uHist,uHist_prp,epsilon_x_hist,epsilon_y_hist,
+epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,FPtfmHist,FHydroHist,FMooringHist,
+topFexternal_hist,rbDataHist = OWENS.Unsteady_Land(inputs;system,assembly,
+topModel=feamodel,topMesh=mymesh,topEl=myel,aero=aeroForces,deformAero)
+
+azi=aziHist#./aziHist*1e-6
+saveName = "$path/vtk/biwing"
+tsave_idx=1:1:numTS-1
+OWENS.OWENSVTK(saveName,t,uHist,system,assembly,sections,aziHist,mymesh,myel,
+    epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,
+    FReactionHist,topFexternal_hist;tsave_idx)
+
+massOwens,stress_U,SF_ult_U,SF_buck_U,stress_L,SF_ult_L,SF_buck_L,stress_TU,SF_ult_TU,
+SF_buck_TU,stress_TL,SF_ult_TL,SF_buck_TL,topstrainout_blade_U,topstrainout_blade_L,
+topstrainout_tower_U,topstrainout_tower_L,topDamage_blade_U,
+topDamage_blade_L,topDamage_tower_U,topDamage_tower_L = OWENS.extractSF(bld_precompinput,
+bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,
+mymesh,myel,myort,number_of_blades,epsilon_x_hist,kappa_y_hist,kappa_z_hist,epsilon_z_hist,
+kappa_x_hist,epsilon_y_hist;verbosity, #Verbosity 0:no printing, 1: summary, 2: summary and spanwise worst safety factor # epsilon_x_hist_1,kappa_y_hist_1,kappa_z_hist_1,epsilon_z_hist_1,kappa_x_hist_1,epsilon_y_hist_1,
+LE_U_idx=1,TE_U_idx=6,SparCapU_idx=3,ForePanelU_idx=2,AftPanelU_idx=5,
+LE_L_idx=1,TE_L_idx=6,SparCapL_idx=3,ForePanelL_idx=2,AftPanelL_idx=5,
+Twr_LE_U_idx=1,Twr_LE_L_idx=1,
+AD15bldNdIdxRng,AD15bldElIdxRng,strut_precompoutput=nothing) #TODO: add in ability to have material safety factors and load safety factors
 
 
-# if testModal
 ##############################################
-# Modal Test
+# Modal
 #############################################
 displ = zeros(mymesh.numNodes*6)
 numModes = 32
