@@ -1,4 +1,4 @@
-import PyPlot
+# import PyPlot
 
 import OWENS
 import OWENSFEA
@@ -28,7 +28,7 @@ ncelem = Inp.ncelem
 nselem = Inp.nselem
 ifw = Inp.ifw
 WindType = Inp.WindType
-AModel = "DMS"#Inp.AModel
+AeroModel = "DMS"#Inp.AeroModel
 windINPfilename = "$(path)$(Inp.windINPfilename)"
 ifw_libfile = Inp.ifw_libfile
 if ifw_libfile == "nothing"
@@ -77,8 +77,8 @@ aeroForces, deformAero, _, _,topSystem,topAssembly, sections, _, _ = OWENS.setup
     nselem,
     joint_type = 0,
     c_mount_ratio = 0.05,
-    AModel, #AD, DMS, AC
-    DSModel="BV",
+    AeroModel, #AD, DMS, AC
+    DynamicStallModel="BV",
     RPI=true,
     cables_connected_to_blade_base = true,
     meshtype = turbineType)
@@ -146,12 +146,12 @@ end
 
 nothing
 
-if AModel=="AD"
+if AeroModel=="AD"
     AD15On = true
 else
     AD15On = false
 end
-hydroOn = true
+platformActive = true
 interpOrder = 2
 hd_input_file = "$(path)/data/HydroDyn.dat"
 md_input_file = "$(path)/data/MoorDyn.dat"
@@ -167,7 +167,7 @@ numTS,
 delta_t,
 AD15On,
 aeroLoadsOn = 2,
-hydroOn,
+platformActive,
 interpOrder,
 hd_input_file,
 md_input_file,
@@ -184,7 +184,7 @@ nothing
 
 topFEAModel = OWENS.FEAModel(;
     analysisType = analysisType,
-    outFilename = "none",
+    dataOutputFilename = "none",
     joint = topJoint,
     platformTurbineConnectionNodeNumber = 1,
     nlOn = true,
@@ -262,7 +262,7 @@ bottomConcTerms = OWENSFEA.applyConcentratedTerms(
     jointData=[])
 bottomFEAModel = OWENS.FEAModel(;
     analysisType = analysisType,
-    outFilename = "none",
+    dataOutputFilename = "none",
     joint = [],
     platformTurbineConnectionNodeNumber = 1,
     nlOn = true,
@@ -307,16 +307,6 @@ if AD15On #TODO: move this into the run functions
 end
 
 nothing
-
-PyPlot.plot(t, uHist_prp[:, 1])
-PyPlot.title("Platform Surge Response")
-PyPlot.xlabel("Time [s]")
-PyPlot.ylabel("Force [N]")
-
-PyPlot.plot(t, FHydroHist[:, 1])
-PyPlot.xlabel("Time [s]")
-PyPlot.ylabel("Force [N]")
-PyPlot.title("Hydrodynamic Surge Loading")
 
 nothing
 

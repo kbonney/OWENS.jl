@@ -3,8 +3,8 @@ import OWENSFEA
 import OWENSAero
 import QuadGK
 import FLOWMath
-import PyPlot
-#### PyPlot.pygui(true)
+# import PyPlot
+# PyPlot.pygui(true)
 import OWENSOpenFASTWrappers
 
 
@@ -35,7 +35,7 @@ ncelem = Inp.ncelem
 nselem = Inp.nselem
 ifw = Inp.ifw
 WindType = Inp.WindType
-AModel = Inp.AModel
+AeroModel = Inp.AeroModel
 windINPfilename = "$(path)$(Inp.windINPfilename)"
 ifw_libfile = Inp.ifw_libfile
 if ifw_libfile == "nothing"
@@ -80,12 +80,12 @@ joint_type = 0
 c_mount_ratio = 0.05
 angularOffset = -pi/2
 custommesh = nothing
-if AModel=="AD" #TODO: unify flag
+if AeroModel=="AD" #TODO: unify flag
     AD15On=true #AD for AeroDyn, DMS for double multiple streamtube, AC for actuator cylinder
 else
     AD15On=false
 end
-DSModel="BV"
+DynamicStallModel="BV"
 RPI=true
 cables_connected_to_blade_base = true
 meshtype = "Darrieus"
@@ -182,27 +182,6 @@ catch
 end
 
 nothing
-
-PyPlot.figure()
-for icon = 1:length(mymesh.conn[:,1])
-    idx1 = mymesh.conn[icon,1]
-    idx2 = mymesh.conn[icon,2]
-    PyPlot.plot3D([mymesh.x[idx1],mymesh.x[idx2]],[mymesh.y[idx1],mymesh.y[idx2]],[mymesh.z[idx1],mymesh.z[idx2]],"k.-")
-    PyPlot.text3D(mymesh.x[idx1].+rand()/30,mymesh.y[idx1].+rand()/30,mymesh.z[idx1].+rand()/30,"$idx1",ha="center",va="center")
-    #### sleep(0.1)
-end
-
-for ijoint = 1:length(myjoint[:,1])
-    idx2 = Int(myjoint[ijoint,2])
-    idx1 = Int(myjoint[ijoint,3])
-    PyPlot.plot3D([mymesh.x[idx1],mymesh.x[idx2]],[mymesh.y[idx1],mymesh.y[idx2]],[mymesh.z[idx1],mymesh.z[idx2]],"r.-")
-    PyPlot.text3D(mymesh.x[idx1].+rand()/30,mymesh.y[idx1].+rand()/30,mymesh.z[idx1].+rand()/30,"$idx1",color="r",ha="center",va="center")
-    PyPlot.text3D(mymesh.x[idx2].+rand()/30,mymesh.y[idx2].+rand()/30,mymesh.z[idx2].+rand()/30,"$idx2",color="r",ha="center",va="center")
-    #### sleep(0.1)
-end
-PyPlot.xlabel("x")
-PyPlot.ylabel("y")
-PyPlot.zlabel("z")
 
 #########################################
 ### Set up Sectional Properties
@@ -472,7 +451,7 @@ if !AD15On
         end
     end
 
-    OWENSAero.setupTurb(shapeX,shapeZ,B,chord,tsr,Vinf;AModel,DSModel,
+    OWENSAero.setupTurb(shapeX,shapeZ,B,chord,tsr,Vinf;AeroModel,DynamicStallModel,
     afname = airfoils,
     bld_y = shapeY,
     rho,
@@ -682,7 +661,7 @@ pBC = [1 1 0
 1 5 0
 1 6 0]
 
-inputs = OWENS.Inputs(;analysisType = structuralModel,
+inputs = OWENS.Inputs(;verbosity,analysisType = structuralModel,
 tocp = [0.0,100000.1],
 Omegaocp = [RPM,RPM] ./ 60,
 tocp_Vinf = [0.0,100000.1],
@@ -693,7 +672,7 @@ AD15On,
 aeroLoadsOn = 2)
 
 feamodel = OWENS.FEAModel(;analysisType = structuralModel,
-outFilename = "none",
+dataOutputFilename = "none",
 joint = myjoint,
 platformTurbineConnectionNodeNumber = 1,
 pBC,

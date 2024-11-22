@@ -1,21 +1,19 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simply Running OWENS · OWENS.jl</title><meta name="title" content="Simply Running OWENS · OWENS.jl"/><meta property="og:title" content="Simply Running OWENS · OWENS.jl"/><meta property="twitter:title" content="Simply Running OWENS · OWENS.jl"/><meta name="description" content="Documentation for OWENS.jl."/><meta property="og:description" content="Documentation for OWENS.jl."/><meta property="twitter:description" content="Documentation for OWENS.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">OWENS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../indepth_installation/">Installation</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Simply Running OWENS</a></li><li><a class="tocitem" href="../B_detailedInputs/">Detailed Inputs</a></li><li><a class="tocitem" href="../C_customizablePreprocessing/">Customizable Preprocessing</a></li><li><a class="tocitem" href="../D_simulatingFloatingPlatforms/">Simulating Floating Platforms</a></li></ul></li><li><a class="tocitem" href="../../OWENS_Dev_Guide/">Developer Guide</a></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../reference/reference/">OWENS</a></li><li><a class="tocitem" href="../../reference/referenceAero/">OWENSAero</a></li><li><a class="tocitem" href="../../reference/referenceFEA/">OWENSFEA</a></li><li><a class="tocitem" href="../../reference/referenceOpenFASTWrappers/">OWENSOpenFASTWrappers</a></li><li><a class="tocitem" href="../../reference/referencePreComp/">OWENSPreComp</a></li></ul></li><li><a class="tocitem" href="../../legacyUserGuide/">Legacy User Guide</a></li><li><a class="tocitem" href="../../VAWTGenUserGuide/">Legacy VAWTGen Guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Simply Running OWENS</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simply Running OWENS</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="simple1"><a class="docs-heading-anchor" href="#simple1">Simply Running OWENS</a><a id="simple1-1"></a><a class="docs-heading-anchor-permalink" href="#simple1" title="Permalink"></a></h1><p>In this example, we show the first level of what is going on behind the precompiled binary Running julia directly with this as a starting point could make things like automating many runs in a way that is not compatible with the current interface, but your design design fits.</p><p>OWENS is comprised of many building blocks.  These series of examples progressively shows the internals of several of the key building blocks a new user might employ for their projects.  Fundamentally, OWENS has been built to be as generalizable as possible. The lowest level of building blocks enable this, however, there are many common use cases for which helper functions have been developed, such as for meshing certain standard architectures and calculating and applying sectional properties to these architectures. The figure below summarizes this at a high level. TODO: yml file definition and inputs expanded</p><p><img src="../../assets/OWENS_Example_Figure_Building_Blocks.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>This example is also available as a Jupyter notebook todo: get link working:</p></div></div><pre><code class="language-julia hljs">import OWENS
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simply Running OWENS · OWENS.jl</title><meta name="title" content="Simply Running OWENS · OWENS.jl"/><meta property="og:title" content="Simply Running OWENS · OWENS.jl"/><meta property="twitter:title" content="Simply Running OWENS · OWENS.jl"/><meta name="description" content="Documentation for OWENS.jl."/><meta property="og:description" content="Documentation for OWENS.jl."/><meta property="twitter:description" content="Documentation for OWENS.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">OWENS.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../indepth_installation/">Installation</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Simply Running OWENS</a></li><li><a class="tocitem" href="../B_detailedInputs/">Detailed Inputs</a></li><li><a class="tocitem" href="../C_customizablePreprocessing/">Customizable Preprocessing</a></li><li><a class="tocitem" href="../D_simulatingFloatingPlatforms/">Simulating Floating Platforms</a></li></ul></li><li><a class="tocitem" href="../../OWENS_Dev_Guide/">Developer Guide</a></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../reference/reference/">OWENS</a></li><li><a class="tocitem" href="../../reference/referenceAero/">OWENSAero</a></li><li><a class="tocitem" href="../../reference/referenceFEA/">OWENSFEA</a></li><li><a class="tocitem" href="../../reference/referenceOpenFASTWrappers/">OWENSOpenFASTWrappers</a></li><li><a class="tocitem" href="../../reference/referencePreComp/">OWENSPreComp</a></li></ul></li><li><a class="tocitem" href="../../legacyUserGuide/">Legacy User Guide</a></li><li><a class="tocitem" href="../../VAWTGenUserGuide/">Legacy VAWTGen Guide</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Simply Running OWENS</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simply Running OWENS</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="simple1"><a class="docs-heading-anchor" href="#simple1">Simply Running OWENS</a><a id="simple1-1"></a><a class="docs-heading-anchor-permalink" href="#simple1" title="Permalink"></a></h1><p>In this example, we show the first level of what is going on behind the precompiled binary Running julia directly with this as a starting point could make things like automating many runs in a way that is not compatible with the current interface, but your design design fits.</p><p>OWENS is comprised of many building blocks.  These series of examples progressively shows the internals of several of the key building blocks a new user might employ for their projects.  Fundamentally, OWENS has been built to be as generalizable as possible. The lowest level of building blocks enable this, however, there are many common use cases for which helper functions have been developed, such as for meshing certain standard architectures and calculating and applying sectional properties to these architectures. The figure below summarizes this at a high level.</p><p><img src="../../assets/OWENS_Example_Figure_Building_Blocks.png" alt/></p><div class="admonition is-success"><header class="admonition-header">Tip</header><div class="admonition-body"><p>This example is also available as a Jupyter notebook</p></div></div><pre><code class="language-julia hljs">import OWENS
 
 runpath = path = &quot;/home/runner/work/OWENS.jl/OWENS.jl/examples/literate&quot; # to run locally, change to splitdir(@__FILE__)[1]
 ##runpath = path = splitdir(@__FILE__)[1]
 
-Inp = OWENS.MasterInput(&quot;$runpath/sampleOWENS.yml&quot;)
+modelopt = OWENS.ModelingOptions(&quot;$(path)/OWENS_Opt.yml&quot;)
+designparams = OWENS.Design_Data(&quot;$path/WINDIO_example.yaml&quot;)
 
-OWENS.runOWENS(Inp,runpath)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: The old combined yaml file is being depreciated in favor of the windio yaml and the modelingoptions format
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/topRunDLC.jl:130
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
+OWENS.runOWENSWINDIO(modelopt,designparams,runpath)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Running: WINDIO Example
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+┌ Error: The windio grids must all be the same for a given component at this time
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:39
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
 Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee668f59fa694053de285aeb6d77f/lib/libaerodyn_inflow_c_binding.so
 
  **************************************************************************************************
@@ -37,97 +35,46 @@ Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee66
   - Date: Nov  5 2024
   - Time: 02:19:23
  Execution Info:
-  - Date: 11/12/2024
-  - Time: 19:18:51+0000
+  - Date: 11/22/2024
+  - Time: 23:04:49+0000
 
  Running ADI.
  Running AeroDyn.
  Running OLAF.
   - Directory:         /home/runner/work/OWENS.jl/OWENS.jl/docs/build/examples
-  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/ExampleB.
+  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/aerodyn.
   - Reading advanced options for OLAF:
  [WARN] Line ignored: &quot;VERT2&quot;   DEFAULT      -10       30.   400     5.      5.     1     5.136    15.136  100
   - OLAF regularization parameters (for wing 1):
-    WingReg (min/max) :  12.2425 25.2472
-    WakeReg (min/max) :  12.2425 25.2472
+    WingReg (min/max) :  12.2425 25.6771
+    WakeReg (min/max) :  12.2425 25.6771
     k = alpha delta nu:   0.0368
  Running InflowWind.
-
-Blades&#39; Mass Breakout
-CLA_5500 20670.29648289118 kg, 2.06 $/kg: $42580.81075475583
-CBX_2400 9730.417758654583 kg, 2.1 $/kg: $20433.877293174624
-ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
-Airex_C70_55 789.5974763487575 kg, 7.23 $/kg: $5708.7897540015165
-EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
-ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
-Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
-
-Tower Mass Breakout
-CLA_5500 4992.974575844168 kg, 2.06 $/kg: $10285.527626238985
-CBX_2400 1217.5626883060443 kg, 2.1 $/kg: $2556.881645442693
-ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
-Airex_C70_55 0.0 kg, 7.23 $/kg: $0.0
-EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
-ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
-Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
-Total Material Cost Blades: $68723.47780193196
-Total Material Cost Tower: $12842.409271681678
-Total Material Cost: $81565.88707361365
-controlStrategy: normal
+controlStrategy: prescribedRPM
 Running Unsteady
 Running in specified rotor speed mode
 
-2.0%┣▉                                          ┫ 1/49 [00:00&lt;Inf:Inf, InfGs/it]
+5.3%┣██▎                                        ┫ 1/19 [00:00&lt;Inf:Inf, InfGs/it]
  [INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on
  subsequent occurences.
-4.1%┣██                                              ┫ 2/49 [00:02&lt;01:11, 2s/it]
-6.1%┣███                                             ┫ 3/49 [00:03&lt;01:05, 1s/it]
-8.2%┣████                                            ┫ 4/49 [00:04&lt;00:55, 1s/it]
-10.2%┣████▉                                          ┫ 5/49 [00:04&lt;00:49, 1s/it]
-12.2%┣█████▊                                         ┫ 6/49 [00:05&lt;00:45, 1s/it]
-14.3%┣██████▊                                        ┫ 7/49 [00:06&lt;00:43, 1s/it]
-16.3%┣███████▊                                       ┫ 8/49 [00:07&lt;00:41, 1it/s]
-18.4%┣████████▋                                      ┫ 9/49 [00:08&lt;00:39, 1it/s]
-20.4%┣█████████▍                                    ┫ 10/49 [00:09&lt;00:37, 1it/s]
-22.4%┣██████████▎                                   ┫ 11/49 [00:10&lt;00:37, 1it/s]
-24.5%┣███████████▎                                  ┫ 12/49 [00:11&lt;00:36, 1it/s]
-26.5%┣████████████▏                                 ┫ 13/49 [00:11&lt;00:34, 1it/s]
-28.6%┣█████████████▏                                ┫ 14/49 [00:12&lt;00:33, 1it/s]
-30.6%┣██████████████                                ┫ 15/49 [00:13&lt;00:31, 1it/s]
-32.7%┣███████████████                               ┫ 16/49 [00:13&lt;00:29, 1it/s]
-34.7%┣████████████████                              ┫ 17/49 [00:14&lt;00:28, 1it/s]
-36.7%┣█████████████████                             ┫ 18/49 [00:14&lt;00:26, 1it/s]
-38.8%┣█████████████████▉                            ┫ 19/49 [00:15&lt;00:25, 1it/s]
-40.8%┣██████████████████▊                           ┫ 20/49 [00:16&lt;00:24, 1it/s]
-42.9%┣███████████████████▊                          ┫ 21/49 [00:16&lt;00:23, 1it/s]
-44.9%┣████████████████████▋                         ┫ 22/49 [00:17&lt;00:22, 1it/s]
-46.9%┣█████████████████████▋                        ┫ 23/49 [00:18&lt;00:21, 1it/s]
-49.0%┣██████████████████████▌                       ┫ 24/49 [00:18&lt;00:20, 1it/s]
-51.0%┣███████████████████████▌                      ┫ 25/49 [00:19&lt;00:19, 1it/s]
-53.1%┣████████████████████████▍                     ┫ 26/49 [00:20&lt;00:18, 1it/s]
-55.1%┣█████████████████████████▍                    ┫ 27/49 [00:20&lt;00:17, 1it/s]
-57.1%┣██████████████████████████▎                   ┫ 28/49 [00:21&lt;00:16, 1it/s]
-59.2%┣███████████████████████████▎                  ┫ 29/49 [00:22&lt;00:15, 1it/s]
-61.2%┣████████████████████████████▏                 ┫ 30/49 [00:22&lt;00:15, 1it/s]
-63.3%┣█████████████████████████████                 ┫ 31/49 [00:23&lt;00:14, 1it/s]
-65.3%┣██████████████████████████████                ┫ 32/49 [00:24&lt;00:13, 1it/s]
-67.3%┣███████████████████████████████               ┫ 33/49 [00:25&lt;00:12, 1it/s]
-69.4%┣████████████████████████████████              ┫ 34/49 [00:25&lt;00:11, 1it/s]
-71.4%┣████████████████████████████████▉             ┫ 35/49 [00:26&lt;00:11, 1it/s]
-73.5%┣█████████████████████████████████▉            ┫ 36/49 [00:27&lt;00:10, 1it/s]
-75.5%┣██████████████████████████████████▊           ┫ 37/49 [00:27&lt;00:09, 1it/s]
-77.6%┣███████████████████████████████████▊          ┫ 38/49 [00:28&lt;00:08, 1it/s]
-79.6%┣████████████████████████████████████▋         ┫ 39/49 [00:29&lt;00:08, 1it/s]
-81.6%┣█████████████████████████████████████▌        ┫ 40/49 [00:29&lt;00:07, 1it/s]
-83.7%┣██████████████████████████████████████▌       ┫ 41/49 [00:30&lt;00:06, 1it/s]
-85.7%┣███████████████████████████████████████▍      ┫ 42/49 [00:31&lt;00:05, 1it/s]
-87.8%┣████████████████████████████████████████▍     ┫ 43/49 [00:32&lt;00:05, 1it/s]
-89.8%┣█████████████████████████████████████████▎    ┫ 44/49 [00:32&lt;00:04, 1it/s]
-91.8%┣██████████████████████████████████████████▎   ┫ 45/49 [00:33&lt;00:03, 1it/s]
-93.9%┣███████████████████████████████████████████▏  ┫ 46/49 [00:34&lt;00:02, 1it/s]
-95.9%┣████████████████████████████████████████████▏ ┫ 47/49 [00:35&lt;00:02, 1it/s]
-98.0%┣█████████████████████████████████████████████ ┫ 48/49 [00:35&lt;00:01, 1it/s]
-100.0%┣█████████████████████████████████████████████┫ 49/49 [00:36&lt;00:00, 1it/s]
+10.5%┣█████                                          ┫ 2/19 [00:04&lt;01:09, 4s/it]
+15.8%┣███████▍                                       ┫ 3/19 [00:08&lt;01:04, 4s/it]
+21.1%┣██████████                                     ┫ 4/19 [00:11&lt;00:56, 4s/it]
+26.3%┣████████████▍                                  ┫ 5/19 [00:14&lt;00:50, 4s/it]
+31.6%┣██████████████▉                                ┫ 6/19 [00:17&lt;00:44, 3s/it]
+36.8%┣█████████████████▎                             ┫ 7/19 [00:20&lt;00:39, 3s/it]
+42.1%┣███████████████████▉                           ┫ 8/19 [00:22&lt;00:34, 3s/it]
+47.4%┣██████████████████████▎                        ┫ 9/19 [00:25&lt;00:31, 3s/it]
+52.6%┣████████████████████████▏                     ┫ 10/19 [00:27&lt;00:27, 3s/it]
+57.9%┣██████████████████████████▋                   ┫ 11/19 [00:30&lt;00:24, 3s/it]
+63.2%┣█████████████████████████████                 ┫ 12/19 [00:32&lt;00:20, 3s/it]
+68.4%┣███████████████████████████████▌              ┫ 13/19 [00:35&lt;00:17, 3s/it]
+73.7%┣██████████████████████████████████            ┫ 14/19 [00:37&lt;00:14, 3s/it]
+78.9%┣████████████████████████████████████▎         ┫ 15/19 [00:39&lt;00:11, 3s/it]
+84.2%┣██████████████████████████████████████▊       ┫ 16/19 [00:41&lt;00:08, 3s/it]
+89.5%┣█████████████████████████████████████████▏    ┫ 17/19 [00:42&lt;00:05, 3s/it]
+94.7%┣███████████████████████████████████████████▋  ┫ 18/19 [00:44&lt;00:03, 3s/it]
+100.0%┣█████████████████████████████████████████████┫ 19/19 [00:46&lt;00:00, 3s/it]
 Simulation Complete.
  &gt;&gt;&gt; FINAL WRITE
 Saving VTK time domain files
@@ -136,159 +83,98 @@ Composite Ultimate and Buckling Safety Factors
 
 UPPER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.1584324840261617
-At time 0.046s at composite station 6 of 21 at lam 4 of 6
-Maximum Damage per hr: 0.8081632660107627
-At composite station 16 of 21 at lam 4 of 6
+Minimum Safety Factor on Surface: 4.315201459635413
+At time 0.019s at composite station 18 of 31 at lam 5 of 6
+Maximum Damage per hr: 4.30910915034404e-12
+At composite station 18 of 31 at lam 4 of 6
 
-Spar Cap SF min: 5.314142561306582
-At time 0.04s at composite station 6 of 21
-Spar Cap Damage max per hour: 1.100000000472069e-5
-At composite station 16 of 21
+Spar Cap SF min: 15.816229941036228
+At time 0.012s at composite station 18 of 31
+Spar Cap Damage max per hour: 2.757319518111356e-19
+At composite station 22 of 31
 
-Leading Edge SF min: 7.851594336598999
-At time 0.018000000000000002s at composite station 6 of 21
-Leading Edge Damage max per hour: 4.000000000109246e-6
-At composite station 14 of 21
+Leading Edge SF min: 18.516273213628942
+At time 0.019s at composite station 19 of 31
+Leading Edge Damage max per hour: 1.248856747913209e-18
+At composite station 5 of 31
 
-Trailing Edge SF min: 6.180848664639612
-At time 0.019s at composite station 6 of 21
-Trailing Edge Damage max per hour: 4.000000002753853e-6
-At composite station 9 of 21
+Trailing Edge SF min: 6.8384930273572735
+At time 0.019s at composite station 18 of 31
+Trailing Edge Damage max per hour: 2.047496961609473e-18
+At composite station 21 of 31
 
-Fore Panel SF min: 15.067878292414761
-At time 0.024s at composite station 6 of 21
-Fore Panel Damage max per hour: 6.000000000057445e-6
-At composite station 14 of 21
+Fore Panel SF min: 18.840680336373683
+At time 0.019s at composite station 19 of 31
+Fore Panel Damage max per hour: 6.104293942254841e-19
+At composite station 4 of 31
 
-Aft Panel SF min: 16.216635697389655
-At time 0.049s at composite station 16 of 21
-Aft Panel Damage max per hour: 8.000000000267118e-6
-At composite station 14 of 21
+Aft Panel SF min: 4.315201459635413
+At time 0.019s at composite station 18 of 31
+Aft Panel Damage max per hour: 2.0087798770584633e-18
+At composite station 10 of 31
 
 
 LOWER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.8644788274296626
-At time 0.046s at composite station 6 of 21 at lam 4 of 6
-Maximum Damage per hr: 1.175510204105518
-At composite station 8 of 21 at lam 3 of 6
+Minimum Safety Factor on Surface: 7.043803180872009
+At time 0.019s at composite station 18 of 31 at lam 6 of 6
+Maximum Damage per hr: 5.668844694632547e-13
+At composite station 19 of 31 at lam 5 of 6
 
-Spar Cap SF min: 7.275242282364504
-At time 0.048s at composite station 6 of 21
-Spar Cap Damage max per hour: 1.6000000000325107e-5
-At composite station 8 of 21
+Spar Cap SF min: 11.133476500933785
+At time 0.019s at composite station 5 of 31
+Spar Cap Damage max per hour: 1.4705224982412614e-18
+At composite station 16 of 31
 
-Leading Edge SF min: 12.033957180076333
-At time 0.015s at composite station 1 of 21
-Leading Edge Damage max per hour: 8.000000000136807e-6
-At composite station 8 of 21
+Leading Edge SF min: 12.490218263187494
+At time 0.019s at composite station 5 of 31
+Leading Edge Damage max per hour: 1.330900845239992e-18
+At composite station 16 of 31
 
-Trailing Edge SF min: 6.042079473051466
-At time 0.02s at composite station 6 of 21
-Trailing Edge Damage max per hour: 4.000000002723925e-6
-At composite station 9 of 21
+Trailing Edge SF min: 7.043803180872009
+At time 0.019s at composite station 18 of 31
+Trailing Edge Damage max per hour: 2.071986498792764e-18
+At composite station 21 of 31
 
-Fore Panel SF min: 18.1241994608904
-At time 0.049s at composite station 16 of 21
-Fore Panel Damage max per hour: 1.0000000000002401e-5
-At composite station 15 of 21
+Fore Panel SF min: 12.021023818142636
+At time 0.019s at composite station 5 of 31
+Fore Panel Damage max per hour: 1.3300403568354829e-18
+At composite station 16 of 31
 
-Aft Panel SF min: 11.123956243511415
-At time 0.049s at composite station 16 of 21
-Aft Panel Damage max per hour: 1.6000000000001666e-5
-At composite station 13 of 21
+Aft Panel SF min: 8.747426261187954
+At time 0.019s at composite station 19 of 31
+Aft Panel Damage max per hour: 2.9918902555005114e-18
+At composite station 19 of 31
 
 
 UPPER TOWER
 
-Minimum Safety Factor on tower Surface: 21.776399681801976
-At time 0.036000000000000004s at composite station 21 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.1469387755502149
-At composite station 1 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 11.058893762006504
+At time 0.019s at composite station 19 of 21 at lam 1 of 1
+Maximum Damage per hr: 4.766311612002527e-14
+At composite station 3 of 21 at lam 1 of 1
 
 
 Lower TOWER
 
-Minimum Safety Factor on tower Surface: 4.814191071713953
-At time 0.049s at composite station 1 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.36734693882694136
-At composite station 21 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 11.934771394836163
+At time 0.019s at composite station 20 of 21 at lam 1 of 1
+Maximum Damage per hr: 4.870829175860671e-14
+At composite station 3 of 21 at lam 1 of 1
 
-Mass of Turbine: 208897.3537787773 kg</code></pre><p>Here is an example of using the same model against the automated DLC run script. TODO: memory issue with running DLC with AeroDyn multiple times. Note that for a setup cutom to a specific design, you&#39;ll want to go to the B level to get all of the detailed inputs correct One of these is the controller where a discon controller library can be coupled instead of the specified RPM control.</p><pre><code class="language-julia hljs">DLCs = [&quot;1_1&quot;] #&quot;normal&quot;
-#### DLCs = [&quot;1_3&quot;] #&quot;normal&quot;
-#### DLCs = [&quot;1_4&quot;] #&quot;normal&quot;
-#### DLCs = [&quot;1_5&quot;] #&quot;normal&quot;
-#### DLCs = [&quot;2_1&quot;] #&quot;freewheelatNormalOperatingRPM&quot;
-#### DLCs = [&quot;2_3&quot;] #&quot;freewheelatNormalOperatingRPM&quot;
-#### DLCs = [&quot;3_1&quot;] #&quot;startup&quot;
-#### DLCs = [&quot;3_2&quot;] #&quot;startup&quot;
-#### DLCs = [&quot;3_3&quot;] #&quot;startup&quot;
-#### DLCs = [&quot;4_1&quot;] #&quot;shutdown&quot;
-#### DLCs = [&quot;4_2&quot;] #&quot;shutdown&quot;
-#### DLCs = [&quot;5_1&quot;] #&quot;emergencyshutdown&quot;
-#### DLCs = [&quot;6_1&quot;] #&quot;parked&quot;
-#### DLCs = [&quot;6_2&quot;] #&quot;parked_idle&quot;
-#### DLCs = [&quot;6_4&quot;] #&quot;parked&quot;
-#### DLCs = [&quot;7_1&quot;] #&quot;parked&quot;
-#### DLCs = [&quot;2_3&quot;,&quot;3_1&quot;,&quot;3_2&quot;,&quot;3_3&quot;,&quot;4_1&quot;,&quot;4_2&quot;,&quot;5_1&quot;]
+Mass of Turbine: 394104.009312226 kg
+WRITING Output File to nothing</code></pre><p>Here is an example of using the same model against the automated DLC run script. TODO: memory issue with running DLC with AeroDyn multiple times. Note that for a setup cutom to a specific design, you&#39;ll want to go to the B level to get all of the detailed inputs correct One of these is the controller where a discon controller library can be coupled instead of the specified RPM control.</p><pre><code class="language-julia hljs">modelopt.DLC_Options.DLCs = [&quot;1_1&quot;] #&quot;normal&quot;
+#### modelopt.DLC_Options.DLCs = [&quot;1_3&quot;,&quot;6_1&quot;] #&quot;normal&quot;
 
-OWENS.runDLC(DLCs,Inp,runpath;
-    IEC_std=&quot;\&quot;1-ED3\&quot;&quot;,
-    WindChar=&quot;\&quot;A\&quot;&quot;,
-    WindClass=1,
-    NumGrid_Z=38,
-    NumGrid_Y=26,
-    Vdesign=11.0,
-    grid_oversize=1.25,
-    Vinf_range=[10.0,15.0],#LinRange(4,24,21),
-    regenWindFiles=true,
-    delta_t_turbsim=0.05,
-    simtime_turbsim=30.0,
-    pathtoturbsim=nothing,
-    runScript=OWENS.runOWENS)
+OWENS.runDLC(modelopt,designparams,runpath)
 
-nothing</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Running DLC 1_1 at Vinf 10.0 m/s
-
- **************************************************************************************************
- TurbSim
-
- Copyright (C) 2024 National Renewable Energy Laboratory
- Copyright (C) 2024 Envision Energy USA LTD
-
- This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY.
- See the &quot;LICENSE&quot; file distributed with this software for details.
- **************************************************************************************************
-
-  Running TurbSim (from OpenFAST-v2.5.0-3490-g24c05a74)
-
-
-  Reading the input file &quot;./turbsimfiles/DLC1_1Vinf10.0.inp&quot;.
- TS_ValidateInput:A coherent turbulence time step file cannot be generated with the IECKAI model.
-  Calculating the spectral and transfer function matrices:
-     u-component matrices (IEC coherence method)
-     v-component matrices (identity coherence)
-     w-component matrices (identity coherence)
-  Generating time series for all points:
-     u-component
-     v-component
-     w-component
-  Computing hub-height statistics
-  Writing statistics to summary file
-  Generating AeroDyn binary time-series file &quot;./turbsimfiles/DLC1_1Vinf10.0.bts&quot;
-
-  Processing complete.  12.488 CPU seconds used.
-
-  TurbSim terminated normally.
-
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
+nothing</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Running DLC 1_1 at Vinf 05.0 m/s
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+┌ Error: The windio grids must all be the same for a given component at this time
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:39
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
 Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee668f59fa694053de285aeb6d77f/lib/libaerodyn_inflow_c_binding.so
 
  **************************************************************************************************
@@ -310,97 +196,46 @@ Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee66
   - Date: Nov  5 2024
   - Time: 02:19:23
  Execution Info:
-  - Date: 11/12/2024
-  - Time: 19:19:53+0000
+  - Date: 11/22/2024
+  - Time: 23:05:41+0000
 
  Running ADI.
  Running AeroDyn.
  Running OLAF.
   - Directory:         /home/runner/work/OWENS.jl/OWENS.jl/docs/build/examples
-  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/ExampleB.
+  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/aerodyn.
   - Reading advanced options for OLAF:
  [WARN] Line ignored: &quot;VERT2&quot;   DEFAULT      -10       30.   400     5.      5.     1     5.136    15.136  100
   - OLAF regularization parameters (for wing 1):
-    WingReg (min/max) :  12.2425 25.2472
-    WakeReg (min/max) :  12.2425 25.2472
+    WingReg (min/max) :  12.2425 25.6771
+    WakeReg (min/max) :  12.2425 25.6771
     k = alpha delta nu:   0.0368
  Running InflowWind.
-
-Blades&#39; Mass Breakout
-CLA_5500 20670.29648289118 kg, 2.06 $/kg: $42580.81075475583
-CBX_2400 9730.417758654583 kg, 2.1 $/kg: $20433.877293174624
-ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
-Airex_C70_55 789.5974763487575 kg, 7.23 $/kg: $5708.7897540015165
-EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
-ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
-Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
-
-Tower Mass Breakout
-CLA_5500 4992.974575844168 kg, 2.06 $/kg: $10285.527626238985
-CBX_2400 1217.5626883060443 kg, 2.1 $/kg: $2556.881645442693
-ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
-Airex_C70_55 0.0 kg, 7.23 $/kg: $0.0
-EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
-ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
-Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
-Total Material Cost Blades: $68723.47780193196
-Total Material Cost Tower: $12842.409271681678
-Total Material Cost: $81565.88707361365
 controlStrategy: normal
 Running Unsteady
 Running in specified rotor speed mode
 
-2.0%┣▉                                          ┫ 1/49 [00:00&lt;Inf:Inf, InfGs/it]
+5.3%┣██▎                                        ┫ 1/19 [00:00&lt;Inf:Inf, InfGs/it]
  [INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on
  subsequent occurences.
-4.1%┣██                                              ┫ 2/49 [00:02&lt;01:23, 2s/it]
-6.1%┣███                                             ┫ 3/49 [00:03&lt;01:05, 1s/it]
-8.2%┣████                                            ┫ 4/49 [00:04&lt;00:54, 1s/it]
-10.2%┣████▉                                          ┫ 5/49 [00:04&lt;00:49, 1s/it]
-12.2%┣█████▊                                         ┫ 6/49 [00:05&lt;00:45, 1s/it]
-14.3%┣██████▊                                        ┫ 7/49 [00:06&lt;00:42, 1s/it]
-16.3%┣███████▊                                       ┫ 8/49 [00:07&lt;00:42, 1s/it]
-18.4%┣████████▋                                      ┫ 9/49 [00:08&lt;00:40, 1it/s]
-20.4%┣█████████▍                                    ┫ 10/49 [00:09&lt;00:38, 1it/s]
-22.4%┣██████████▎                                   ┫ 11/49 [00:10&lt;00:37, 1it/s]
-24.5%┣███████████▎                                  ┫ 12/49 [00:11&lt;00:35, 1it/s]
-26.5%┣████████████▏                                 ┫ 13/49 [00:11&lt;00:34, 1it/s]
-28.6%┣█████████████▏                                ┫ 14/49 [00:12&lt;00:32, 1it/s]
-30.6%┣██████████████                                ┫ 15/49 [00:13&lt;00:30, 1it/s]
-32.7%┣███████████████                               ┫ 16/49 [00:13&lt;00:29, 1it/s]
-34.7%┣████████████████                              ┫ 17/49 [00:14&lt;00:28, 1it/s]
-36.7%┣█████████████████                             ┫ 18/49 [00:15&lt;00:27, 1it/s]
-38.8%┣█████████████████▉                            ┫ 19/49 [00:15&lt;00:25, 1it/s]
-40.8%┣██████████████████▊                           ┫ 20/49 [00:16&lt;00:24, 1it/s]
-42.9%┣███████████████████▊                          ┫ 21/49 [00:16&lt;00:23, 1it/s]
-44.9%┣████████████████████▋                         ┫ 22/49 [00:17&lt;00:22, 1it/s]
-46.9%┣█████████████████████▋                        ┫ 23/49 [00:18&lt;00:21, 1it/s]
-49.0%┣██████████████████████▌                       ┫ 24/49 [00:18&lt;00:20, 1it/s]
-51.0%┣███████████████████████▌                      ┫ 25/49 [00:19&lt;00:19, 1it/s]
-53.1%┣████████████████████████▍                     ┫ 26/49 [00:19&lt;00:18, 1it/s]
-55.1%┣█████████████████████████▍                    ┫ 27/49 [00:20&lt;00:17, 1it/s]
-57.1%┣██████████████████████████▎                   ┫ 28/49 [00:21&lt;00:16, 1it/s]
-59.2%┣███████████████████████████▎                  ┫ 29/49 [00:22&lt;00:15, 1it/s]
-61.2%┣████████████████████████████▏                 ┫ 30/49 [00:22&lt;00:15, 1it/s]
-63.3%┣█████████████████████████████                 ┫ 31/49 [00:23&lt;00:14, 1it/s]
-65.3%┣██████████████████████████████                ┫ 32/49 [00:24&lt;00:13, 1it/s]
-67.3%┣███████████████████████████████               ┫ 33/49 [00:24&lt;00:12, 1it/s]
-69.4%┣████████████████████████████████              ┫ 34/49 [00:25&lt;00:11, 1it/s]
-71.4%┣████████████████████████████████▉             ┫ 35/49 [00:26&lt;00:11, 1it/s]
-73.5%┣█████████████████████████████████▉            ┫ 36/49 [00:26&lt;00:10, 1it/s]
-75.5%┣██████████████████████████████████▊           ┫ 37/49 [00:27&lt;00:09, 1it/s]
-77.6%┣███████████████████████████████████▊          ┫ 38/49 [00:28&lt;00:08, 1it/s]
-79.6%┣████████████████████████████████████▋         ┫ 39/49 [00:28&lt;00:07, 1it/s]
-81.6%┣█████████████████████████████████████▌        ┫ 40/49 [00:29&lt;00:07, 1it/s]
-83.7%┣██████████████████████████████████████▌       ┫ 41/49 [00:30&lt;00:06, 1it/s]
-85.7%┣███████████████████████████████████████▍      ┫ 42/49 [00:31&lt;00:05, 1it/s]
-87.8%┣████████████████████████████████████████▍     ┫ 43/49 [00:31&lt;00:04, 1it/s]
-89.8%┣█████████████████████████████████████████▎    ┫ 44/49 [00:32&lt;00:04, 1it/s]
-91.8%┣██████████████████████████████████████████▎   ┫ 45/49 [00:33&lt;00:03, 1it/s]
-93.9%┣███████████████████████████████████████████▏  ┫ 46/49 [00:34&lt;00:02, 1it/s]
-95.9%┣████████████████████████████████████████████▏ ┫ 47/49 [00:34&lt;00:01, 1it/s]
-98.0%┣█████████████████████████████████████████████ ┫ 48/49 [00:35&lt;00:01, 1it/s]
-100.0%┣█████████████████████████████████████████████┫ 49/49 [00:36&lt;00:00, 1it/s]
+10.5%┣█████                                          ┫ 2/19 [00:03&lt;00:44, 3s/it]
+15.8%┣███████▍                                       ┫ 3/19 [00:05&lt;00:41, 3s/it]
+21.1%┣██████████                                     ┫ 4/19 [00:08&lt;00:38, 3s/it]
+26.3%┣████████████▍                                  ┫ 5/19 [00:10&lt;00:36, 3s/it]
+31.6%┣██████████████▉                                ┫ 6/19 [00:13&lt;00:33, 3s/it]
+36.8%┣█████████████████▎                             ┫ 7/19 [00:14&lt;00:29, 2s/it]
+42.1%┣███████████████████▉                           ┫ 8/19 [00:16&lt;00:25, 2s/it]
+47.4%┣██████████████████████▎                        ┫ 9/19 [00:18&lt;00:22, 2s/it]
+52.6%┣████████████████████████▏                     ┫ 10/19 [00:19&lt;00:19, 2s/it]
+57.9%┣██████████████████████████▋                   ┫ 11/19 [00:21&lt;00:17, 2s/it]
+63.2%┣█████████████████████████████                 ┫ 12/19 [00:23&lt;00:15, 2s/it]
+68.4%┣███████████████████████████████▌              ┫ 13/19 [00:25&lt;00:12, 2s/it]
+73.7%┣██████████████████████████████████            ┫ 14/19 [00:26&lt;00:10, 2s/it]
+78.9%┣████████████████████████████████████▎         ┫ 15/19 [00:28&lt;00:08, 2s/it]
+84.2%┣██████████████████████████████████████▊       ┫ 16/19 [00:30&lt;00:06, 2s/it]
+89.5%┣█████████████████████████████████████████▏    ┫ 17/19 [00:31&lt;00:04, 2s/it]
+94.7%┣███████████████████████████████████████████▋  ┫ 18/19 [00:33&lt;00:02, 2s/it]
+100.0%┣█████████████████████████████████████████████┫ 19/19 [00:35&lt;00:00, 2s/it]
 Simulation Complete.
  &gt;&gt;&gt; FINAL WRITE
 Saving VTK time domain files
@@ -409,127 +244,94 @@ Composite Ultimate and Buckling Safety Factors
 
 UPPER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.1584324840261617
-At time 0.046s at composite station 6 of 21 at lam 4 of 6
-Maximum Damage per hr: 0.8081632660107627
-At composite station 16 of 21 at lam 4 of 6
+Minimum Safety Factor on Surface: 15.035172814300832
+At time 0.019s at composite station 5 of 31 at lam 4 of 6
+Maximum Damage per hr: 1.7717787029513516e-13
+At composite station 3 of 31 at lam 4 of 6
 
-Spar Cap SF min: 5.314142561306582
-At time 0.04s at composite station 6 of 21
-Spar Cap Damage max per hour: 1.100000000472069e-5
-At composite station 16 of 21
+Spar Cap SF min: 29.020781672342117
+At time 0.019s at composite station 5 of 31
+Spar Cap Damage max per hour: 4.336096548955078e-19
+At composite station 16 of 31
 
-Leading Edge SF min: 7.851594336598999
-At time 0.018000000000000002s at composite station 6 of 21
-Leading Edge Damage max per hour: 4.000000000109246e-6
-At composite station 14 of 21
+Leading Edge SF min: 85.54267937195199
+At time 0.019s at composite station 22 of 31
+Leading Edge Damage max per hour: 2.129096159951066e-19
+At composite station 10 of 31
 
-Trailing Edge SF min: 6.180848664639612
-At time 0.019s at composite station 6 of 21
-Trailing Edge Damage max per hour: 4.000000002753853e-6
-At composite station 9 of 21
+Trailing Edge SF min: 98.34287377483511
+At time 0.019s at composite station 19 of 31
+Trailing Edge Damage max per hour: 2.176789316174752e-19
+At composite station 18 of 31
 
-Fore Panel SF min: 15.067878292414761
-At time 0.024s at composite station 6 of 21
-Fore Panel Damage max per hour: 6.000000000057445e-6
-At composite station 14 of 21
+Fore Panel SF min: 39.2501139127054
+At time 0.019s at composite station 5 of 31
+Fore Panel Damage max per hour: 2.2664551449134594e-19
+At composite station 3 of 31
 
-Aft Panel SF min: 16.216635697389655
-At time 0.049s at composite station 16 of 21
-Aft Panel Damage max per hour: 8.000000000267118e-6
-At composite station 14 of 21
+Aft Panel SF min: 17.361207713742115
+At time 0.019s at composite station 5 of 31
+Aft Panel Damage max per hour: 6.475471916106827e-19
+At composite station 3 of 31
 
 
 LOWER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.8644788274296626
-At time 0.046s at composite station 6 of 21 at lam 4 of 6
-Maximum Damage per hr: 1.175510204105518
-At composite station 8 of 21 at lam 3 of 6
+Minimum Safety Factor on Surface: 13.15012475165295
+At time 0.019s at composite station 3 of 31 at lam 4 of 6
+Maximum Damage per hr: 5.669481922492228e-14
+At composite station 20 of 31 at lam 3 of 6
 
-Spar Cap SF min: 7.275242282364504
-At time 0.048s at composite station 6 of 21
-Spar Cap Damage max per hour: 1.6000000000325107e-5
-At composite station 8 of 21
+Spar Cap SF min: 22.318183609861077
+At time 0.019s at composite station 3 of 31
+Spar Cap Damage max per hour: 2.992226570204231e-19
+At composite station 20 of 31
 
-Leading Edge SF min: 12.033957180076333
-At time 0.015s at composite station 1 of 21
-Leading Edge Damage max per hour: 8.000000000136807e-6
-At composite station 8 of 21
+Leading Edge SF min: 47.6057310172029
+At time 0.019s at composite station 3 of 31
+Leading Edge Damage max per hour: 2.1136337845393292e-19
+At composite station 2 of 31
 
-Trailing Edge SF min: 6.042079473051466
-At time 0.02s at composite station 6 of 21
-Trailing Edge Damage max per hour: 4.000000002723925e-6
-At composite station 9 of 21
+Trailing Edge SF min: 92.56233345422386
+At time 0.019s at composite station 19 of 31
+Trailing Edge Damage max per hour: 1.271431989431805e-19
+At composite station 4 of 31
 
-Fore Panel SF min: 18.1241994608904
-At time 0.049s at composite station 16 of 21
-Fore Panel Damage max per hour: 1.0000000000002401e-5
-At composite station 15 of 21
+Fore Panel SF min: 31.90620136981591
+At time 0.019s at composite station 3 of 31
+Fore Panel Damage max per hour: 1.785255144632609e-19
+At composite station 19 of 31
 
-Aft Panel SF min: 11.123956243511415
-At time 0.049s at composite station 16 of 21
-Aft Panel Damage max per hour: 1.6000000000001666e-5
-At composite station 13 of 21
+Aft Panel SF min: 21.40046194551505
+At time 0.019s at composite station 3 of 31
+Aft Panel Damage max per hour: 2.961587158905542e-19
+At composite station 20 of 31
 
 
 UPPER TOWER
 
-Minimum Safety Factor on tower Surface: 21.776399681801976
-At time 0.036000000000000004s at composite station 21 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.1469387755502149
-At composite station 1 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 190.30567855026214
+At time 0.019s at composite station 19 of 21 at lam 1 of 1
+Maximum Damage per hr: 4.242516492262383e-14
+At composite station 19 of 21 at lam 1 of 1
 
 
 Lower TOWER
 
-Minimum Safety Factor on tower Surface: 4.814191071713953
-At time 0.049s at composite station 1 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.36734693882694136
-At composite station 21 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 141.26880635844822
+At time 0.019s at composite station 19 of 21 at lam 1 of 1
+Maximum Damage per hr: 2.2975816353289144e-14
+At composite station 4 of 21 at lam 1 of 1
 
-Mass of Turbine: 208897.3537787773 kg
-Running DLC 1_1 at Vinf 15.0 m/s
-
- **************************************************************************************************
- TurbSim
-
- Copyright (C) 2024 National Renewable Energy Laboratory
- Copyright (C) 2024 Envision Energy USA LTD
-
- This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY.
- See the &quot;LICENSE&quot; file distributed with this software for details.
- **************************************************************************************************
-
-  Running TurbSim (from OpenFAST-v2.5.0-3490-g24c05a74)
-
-
-  Reading the input file &quot;./turbsimfiles/DLC1_1Vinf15.0.inp&quot;.
- TS_ValidateInput:A coherent turbulence time step file cannot be generated with the IECKAI model.
-  Calculating the spectral and transfer function matrices:
-     u-component matrices (IEC coherence method)
-     v-component matrices (identity coherence)
-     w-component matrices (identity coherence)
-  Generating time series for all points:
-     u-component
-     v-component
-     w-component
-  Computing hub-height statistics
-  Writing statistics to summary file
-  Generating AeroDyn binary time-series file &quot;./turbsimfiles/DLC1_1Vinf15.0.bts&quot;
-
-  Processing complete.  12.011 CPU seconds used.
-
-  TurbSim terminated normally.
-
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
-┌ Warning: Data for SN curve control points not found in material file columns 23:28 for stress in Mpa, 29:33 for cycles in log10
-└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:659
+Mass of Turbine: 394104.009312226 kg
+WRITING Output File to nothing
+Running DLC 1_1 at Vinf 10.0 m/s
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+┌ Error: The windio grids must all be the same for a given component at this time
+└ @ OWENS ~/work/OWENS.jl/OWENS.jl/src/fileio.jl:39
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
+Custom span is not specified in OWENS input, using WindIO outer_shape_bem sqrt.(reference_axis_x.^2 .+ reference_axis_y.^2 .+ reference_axis_z.^2) as common span that all the other values are splined to
 Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee668f59fa694053de285aeb6d77f/lib/libaerodyn_inflow_c_binding.so
 
  **************************************************************************************************
@@ -551,97 +353,46 @@ Opening AeroDyn-Inflow library at: /home/runner/.julia/artifacts/40e731aa229ee66
   - Date: Nov  5 2024
   - Time: 02:19:23
  Execution Info:
-  - Date: 11/12/2024
-  - Time: 19:20:54+0000
+  - Date: 11/22/2024
+  - Time: 23:06:22+0000
 
  Running ADI.
  Running AeroDyn.
  Running OLAF.
   - Directory:         /home/runner/work/OWENS.jl/OWENS.jl/docs/build/examples
-  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/ExampleB.
+  - RootName:          /home/runner/work/OWENS.jl/OWENS.jl/examples/literate/aerodyn.
   - Reading advanced options for OLAF:
  [WARN] Line ignored: &quot;VERT2&quot;   DEFAULT      -10       30.   400     5.      5.     1     5.136    15.136  100
   - OLAF regularization parameters (for wing 1):
-    WingReg (min/max) :  12.2425 25.2472
-    WakeReg (min/max) :  12.2425 25.2472
+    WingReg (min/max) :  12.2425 25.6771
+    WakeReg (min/max) :  12.2425 25.6771
     k = alpha delta nu:   0.0368
  Running InflowWind.
-
-Blades&#39; Mass Breakout
-CLA_5500 20670.29648289118 kg, 2.06 $/kg: $42580.81075475583
-CBX_2400 9730.417758654583 kg, 2.1 $/kg: $20433.877293174624
-ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
-Airex_C70_55 789.5974763487575 kg, 7.23 $/kg: $5708.7897540015165
-EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
-ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
-Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
-
-Tower Mass Breakout
-CLA_5500 4992.974575844168 kg, 2.06 $/kg: $10285.527626238985
-CBX_2400 1217.5626883060443 kg, 2.1 $/kg: $2556.881645442693
-ETLX_2400 0.0 kg, 2.21 $/kg: $0.0
-Airex_C70_55 0.0 kg, 7.23 $/kg: $0.0
-EBX_2400_x10 0.0 kg, 2.06 $/kg: $0.0
-ETLX_2400_x10 0.0 kg, 2.1 $/kg: $0.0
-Airex_C70_55_x10 0.0 kg, 7.23 $/kg: $0.0
-Total Material Cost Blades: $68723.47780193196
-Total Material Cost Tower: $12842.409271681678
-Total Material Cost: $81565.88707361365
 controlStrategy: normal
 Running Unsteady
 Running in specified rotor speed mode
 
-2.0%┣▉                                          ┫ 1/49 [00:00&lt;Inf:Inf, InfGs/it]
+5.3%┣██▎                                        ┫ 1/19 [00:00&lt;Inf:Inf, InfGs/it]
  [INFO] FVW: Update States: reevaluation at the same starting time.  This will not print on
  subsequent occurences.
-4.1%┣██                                              ┫ 2/49 [00:02&lt;01:23, 2s/it]
-6.1%┣███                                             ┫ 3/49 [00:03&lt;01:05, 1s/it]
-8.2%┣████                                            ┫ 4/49 [00:04&lt;00:54, 1s/it]
-10.2%┣████▉                                          ┫ 5/49 [00:04&lt;00:49, 1s/it]
-12.2%┣█████▊                                         ┫ 6/49 [00:05&lt;00:45, 1s/it]
-14.3%┣██████▊                                        ┫ 7/49 [00:06&lt;00:42, 1s/it]
-16.3%┣███████▊                                       ┫ 8/49 [00:07&lt;00:42, 1s/it]
-18.4%┣████████▋                                      ┫ 9/49 [00:08&lt;00:40, 1it/s]
-20.4%┣█████████▍                                    ┫ 10/49 [00:09&lt;00:38, 1it/s]
-22.4%┣██████████▎                                   ┫ 11/49 [00:10&lt;00:37, 1it/s]
-24.5%┣███████████▎                                  ┫ 12/49 [00:11&lt;00:35, 1it/s]
-26.5%┣████████████▏                                 ┫ 13/49 [00:11&lt;00:34, 1it/s]
-28.6%┣█████████████▏                                ┫ 14/49 [00:12&lt;00:32, 1it/s]
-30.6%┣██████████████                                ┫ 15/49 [00:13&lt;00:30, 1it/s]
-32.7%┣███████████████                               ┫ 16/49 [00:13&lt;00:29, 1it/s]
-34.7%┣████████████████                              ┫ 17/49 [00:14&lt;00:27, 1it/s]
-36.7%┣█████████████████                             ┫ 18/49 [00:15&lt;00:27, 1it/s]
-38.8%┣█████████████████▉                            ┫ 19/49 [00:15&lt;00:25, 1it/s]
-40.8%┣██████████████████▊                           ┫ 20/49 [00:16&lt;00:24, 1it/s]
-42.9%┣███████████████████▊                          ┫ 21/49 [00:16&lt;00:23, 1it/s]
-44.9%┣████████████████████▋                         ┫ 22/49 [00:17&lt;00:22, 1it/s]
-46.9%┣█████████████████████▋                        ┫ 23/49 [00:18&lt;00:21, 1it/s]
-49.0%┣██████████████████████▌                       ┫ 24/49 [00:18&lt;00:20, 1it/s]
-51.0%┣███████████████████████▌                      ┫ 25/49 [00:19&lt;00:19, 1it/s]
-53.1%┣████████████████████████▍                     ┫ 26/49 [00:20&lt;00:18, 1it/s]
-55.1%┣█████████████████████████▍                    ┫ 27/49 [00:20&lt;00:17, 1it/s]
-57.1%┣██████████████████████████▎                   ┫ 28/49 [00:21&lt;00:16, 1it/s]
-59.2%┣███████████████████████████▎                  ┫ 29/49 [00:21&lt;00:15, 1it/s]
-61.2%┣████████████████████████████▏                 ┫ 30/49 [00:22&lt;00:14, 1it/s]
-63.3%┣█████████████████████████████                 ┫ 31/49 [00:23&lt;00:14, 1it/s]
-65.3%┣██████████████████████████████                ┫ 32/49 [00:24&lt;00:13, 1it/s]
-67.3%┣███████████████████████████████               ┫ 33/49 [00:24&lt;00:12, 1it/s]
-69.4%┣████████████████████████████████              ┫ 34/49 [00:25&lt;00:11, 1it/s]
-71.4%┣████████████████████████████████▉             ┫ 35/49 [00:26&lt;00:11, 1it/s]
-73.5%┣█████████████████████████████████▉            ┫ 36/49 [00:26&lt;00:10, 1it/s]
-75.5%┣██████████████████████████████████▊           ┫ 37/49 [00:27&lt;00:09, 1it/s]
-77.6%┣███████████████████████████████████▊          ┫ 38/49 [00:28&lt;00:08, 1it/s]
-79.6%┣████████████████████████████████████▋         ┫ 39/49 [00:28&lt;00:07, 1it/s]
-81.6%┣█████████████████████████████████████▌        ┫ 40/49 [00:29&lt;00:07, 1it/s]
-83.7%┣██████████████████████████████████████▌       ┫ 41/49 [00:30&lt;00:06, 1it/s]
-85.7%┣███████████████████████████████████████▍      ┫ 42/49 [00:30&lt;00:05, 1it/s]
-87.8%┣████████████████████████████████████████▍     ┫ 43/49 [00:31&lt;00:04, 1it/s]
-89.8%┣█████████████████████████████████████████▎    ┫ 44/49 [00:32&lt;00:04, 1it/s]
-91.8%┣██████████████████████████████████████████▎   ┫ 45/49 [00:33&lt;00:03, 1it/s]
-93.9%┣███████████████████████████████████████████▏  ┫ 46/49 [00:34&lt;00:02, 1it/s]
-95.9%┣████████████████████████████████████████████▏ ┫ 47/49 [00:34&lt;00:01, 1it/s]
-98.0%┣█████████████████████████████████████████████ ┫ 48/49 [00:35&lt;00:01, 1it/s]
-100.0%┣█████████████████████████████████████████████┫ 49/49 [00:36&lt;00:00, 1it/s]
+10.5%┣█████                                          ┫ 2/19 [00:03&lt;00:44, 3s/it]
+15.8%┣███████▍                                       ┫ 3/19 [00:05&lt;00:40, 2s/it]
+21.1%┣██████████                                     ┫ 4/19 [00:08&lt;00:38, 3s/it]
+26.3%┣████████████▍                                  ┫ 5/19 [00:10&lt;00:35, 3s/it]
+31.6%┣██████████████▉                                ┫ 6/19 [00:12&lt;00:32, 2s/it]
+36.8%┣█████████████████▎                             ┫ 7/19 [00:14&lt;00:29, 2s/it]
+42.1%┣███████████████████▉                           ┫ 8/19 [00:16&lt;00:25, 2s/it]
+47.4%┣██████████████████████▎                        ┫ 9/19 [00:17&lt;00:22, 2s/it]
+52.6%┣████████████████████████▏                     ┫ 10/19 [00:19&lt;00:19, 2s/it]
+57.9%┣██████████████████████████▋                   ┫ 11/19 [00:21&lt;00:17, 2s/it]
+63.2%┣█████████████████████████████                 ┫ 12/19 [00:23&lt;00:14, 2s/it]
+68.4%┣███████████████████████████████▌              ┫ 13/19 [00:24&lt;00:12, 2s/it]
+73.7%┣██████████████████████████████████            ┫ 14/19 [00:26&lt;00:10, 2s/it]
+78.9%┣████████████████████████████████████▎         ┫ 15/19 [00:28&lt;00:08, 2s/it]
+84.2%┣██████████████████████████████████████▊       ┫ 16/19 [00:29&lt;00:06, 2s/it]
+89.5%┣█████████████████████████████████████████▏    ┫ 17/19 [00:31&lt;00:04, 2s/it]
+94.7%┣███████████████████████████████████████████▋  ┫ 18/19 [00:33&lt;00:02, 2s/it]
+100.0%┣█████████████████████████████████████████████┫ 19/19 [00:34&lt;00:00, 2s/it]
 Simulation Complete.
  &gt;&gt;&gt; FINAL WRITE
 Saving VTK time domain files
@@ -650,83 +401,84 @@ Composite Ultimate and Buckling Safety Factors
 
 UPPER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.1584324840261617
-At time 0.046s at composite station 6 of 21 at lam 4 of 6
-Maximum Damage per hr: 0.8081632660107627
-At composite station 16 of 21 at lam 4 of 6
+Minimum Safety Factor on Surface: 15.035172814300832
+At time 0.019s at composite station 5 of 31 at lam 4 of 6
+Maximum Damage per hr: 1.7717787029513516e-13
+At composite station 3 of 31 at lam 4 of 6
 
-Spar Cap SF min: 5.314142561306582
-At time 0.04s at composite station 6 of 21
-Spar Cap Damage max per hour: 1.100000000472069e-5
-At composite station 16 of 21
+Spar Cap SF min: 29.020781672342117
+At time 0.019s at composite station 5 of 31
+Spar Cap Damage max per hour: 4.336096548955078e-19
+At composite station 16 of 31
 
-Leading Edge SF min: 7.851594336598999
-At time 0.018000000000000002s at composite station 6 of 21
-Leading Edge Damage max per hour: 4.000000000109246e-6
-At composite station 14 of 21
+Leading Edge SF min: 85.54267937195199
+At time 0.019s at composite station 22 of 31
+Leading Edge Damage max per hour: 2.129096159951066e-19
+At composite station 10 of 31
 
-Trailing Edge SF min: 6.180848664639612
-At time 0.019s at composite station 6 of 21
-Trailing Edge Damage max per hour: 4.000000002753853e-6
-At composite station 9 of 21
+Trailing Edge SF min: 98.34287377483511
+At time 0.019s at composite station 19 of 31
+Trailing Edge Damage max per hour: 2.176789316174752e-19
+At composite station 18 of 31
 
-Fore Panel SF min: 15.067878292414761
-At time 0.024s at composite station 6 of 21
-Fore Panel Damage max per hour: 6.000000000057445e-6
-At composite station 14 of 21
+Fore Panel SF min: 39.2501139127054
+At time 0.019s at composite station 5 of 31
+Fore Panel Damage max per hour: 2.2664551449134594e-19
+At composite station 3 of 31
 
-Aft Panel SF min: 16.216635697389655
-At time 0.049s at composite station 16 of 21
-Aft Panel Damage max per hour: 8.000000000267118e-6
-At composite station 14 of 21
+Aft Panel SF min: 17.361207713742115
+At time 0.019s at composite station 5 of 31
+Aft Panel Damage max per hour: 6.475471916106827e-19
+At composite station 3 of 31
 
 
 LOWER BLADE SURFACE
 
-Minimum Safety Factor on Surface: 3.8644788274296626
-At time 0.046s at composite station 6 of 21 at lam 4 of 6
-Maximum Damage per hr: 1.175510204105518
-At composite station 8 of 21 at lam 3 of 6
+Minimum Safety Factor on Surface: 13.15012475165295
+At time 0.019s at composite station 3 of 31 at lam 4 of 6
+Maximum Damage per hr: 5.669481922492228e-14
+At composite station 20 of 31 at lam 3 of 6
 
-Spar Cap SF min: 7.275242282364504
-At time 0.048s at composite station 6 of 21
-Spar Cap Damage max per hour: 1.6000000000325107e-5
-At composite station 8 of 21
+Spar Cap SF min: 22.318183609861077
+At time 0.019s at composite station 3 of 31
+Spar Cap Damage max per hour: 2.992226570204231e-19
+At composite station 20 of 31
 
-Leading Edge SF min: 12.033957180076333
-At time 0.015s at composite station 1 of 21
-Leading Edge Damage max per hour: 8.000000000136807e-6
-At composite station 8 of 21
+Leading Edge SF min: 47.6057310172029
+At time 0.019s at composite station 3 of 31
+Leading Edge Damage max per hour: 2.1136337845393292e-19
+At composite station 2 of 31
 
-Trailing Edge SF min: 6.042079473051466
-At time 0.02s at composite station 6 of 21
-Trailing Edge Damage max per hour: 4.000000002723925e-6
-At composite station 9 of 21
+Trailing Edge SF min: 92.56233345422386
+At time 0.019s at composite station 19 of 31
+Trailing Edge Damage max per hour: 1.271431989431805e-19
+At composite station 4 of 31
 
-Fore Panel SF min: 18.1241994608904
-At time 0.049s at composite station 16 of 21
-Fore Panel Damage max per hour: 1.0000000000002401e-5
-At composite station 15 of 21
+Fore Panel SF min: 31.90620136981591
+At time 0.019s at composite station 3 of 31
+Fore Panel Damage max per hour: 1.785255144632609e-19
+At composite station 19 of 31
 
-Aft Panel SF min: 11.123956243511415
-At time 0.049s at composite station 16 of 21
-Aft Panel Damage max per hour: 1.6000000000001666e-5
-At composite station 13 of 21
+Aft Panel SF min: 21.40046194551505
+At time 0.019s at composite station 3 of 31
+Aft Panel Damage max per hour: 2.961587158905542e-19
+At composite station 20 of 31
 
 
 UPPER TOWER
 
-Minimum Safety Factor on tower Surface: 21.776399681801976
-At time 0.036000000000000004s at composite station 21 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.1469387755502149
-At composite station 1 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 190.30567855026214
+At time 0.019s at composite station 19 of 21 at lam 1 of 1
+Maximum Damage per hr: 4.242516492262383e-14
+At composite station 19 of 21 at lam 1 of 1
 
 
 Lower TOWER
 
-Minimum Safety Factor on tower Surface: 4.814191071713953
-At time 0.049s at composite station 1 of 21 at lam 1 of 1
-Maximum Damage per hr: 0.36734693882694136
-At composite station 21 of 21 at lam 1 of 1
+Minimum Safety Factor on tower Surface: 141.26880635844822
+At time 0.019s at composite station 19 of 21 at lam 1 of 1
+Maximum Damage per hr: 2.2975816353289144e-14
+At composite station 4 of 21 at lam 1 of 1
 
-Mass of Turbine: 208897.3537787773 kg</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../indepth_installation/">« Installation</a><a class="docs-footer-nextpage" href="../B_detailedInputs/">Detailed Inputs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 12 November 2024 19:24">Tuesday 12 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Mass of Turbine: 394104.009312226 kg
+WRITING Output File to nothing</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../indepth_installation/">« Installation</a><a class="docs-footer-nextpage" href="../B_detailedInputs/">Detailed Inputs »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Friday 22 November 2024 23:09">Friday 22 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

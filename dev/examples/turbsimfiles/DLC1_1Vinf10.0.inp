@@ -19,11 +19,11 @@ True      Clockwise   - Clockwise rotation looking downwind? (Used only for FF b
 38 NumGrid_Z - Vertical grid-point matrix dimension
 26 NumGrid_Y - Horizontal grid-point matrix dimension
 0.05 TimeStep - Time step [s]
-30.0 AnalysisTime - Length of analysis time series [s] (program will add time if necessary)
+600.0 AnalysisTime - Length of analysis time series [s] (program will add time if necessary)
 "ALL"     UsableTime  - Usable length of output time series [s] (GridWidth/MeanHHWS s added if not "ALL")
-48.4095455 HubHt - Hub height [m] (should be > 0.5*GridHeight)
-72.61431825 GridHeight - Grid height [m]
-135.0280764 GridWidth - Grid width [m] (should be >= 2*(RotorRadius+ShaftLength))
+55.0 HubHt - Hub height [m] (should be > 0.5*GridHeight)
+82.5 GridHeight - Grid height [m]
+118.82470723200001 GridWidth - Grid width [m] (should be >= 2*(RotorRadius+ShaftLength))
 0.0 VFlowAng - Vertical mean flow (uptilt) angle [degrees]
 0.0 HFlowAng - Horizontal mean flow (skew) angle [degrees]
 
@@ -36,7 +36,7 @@ True      Clockwise   - Clockwise rotation looking downwind? (Used only for FF b
 default   ETMc        - IEC Extreme turbulence model "c" parameter [m/s] (or "default")
 default   ProfileType - Wind profile type (see Table 6 for valid codes)
 "unused"  ProfileFile - Name of the file that contains user-defined input profiles
-3.0 RefHt - Height of the reference wind speed [m]
+55.0 RefHt - Height of the reference wind speed [m]
 10.0 URef - Mean wind speed at the reference height [m/s] [must be 1-hr mean for API model]
 450       ZJetMax     - Height of the low-level jet [m] (70-490 m or "default", only for "JET" profile)
 default   PLExp       - Power law exponent (or "default")
