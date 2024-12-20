@@ -18,27 +18,7 @@ import FLOWMath
 
 path,_ = splitdir(@__FILE__)
 
-# R_root = 0.001 # m biwing radius
-# R_biwing = 20.0*3 # outer radius
-# R_tip = 40.0*3 # outer radius
-# nbelem_root = 5 #biwing elements for each 
-# nbelem_biwing = 5 #tip elements
-# nbelem_tip = 5 #tip elements
-
-# N_control = 5
-# bshapex_root = LinRange(0.0,R_root,N_control) #Blade shape, magnitude is relevant
-# bshapez_root = zeros(N_control) #Blade shape, magnitude is relevant
-# bshapex_biwing_U = LinRange(R_root,R_biwing,N_control) #Blade shape, magnitude is relevant
-# bshapez_biwing_U = [0.0,2.0,2.0,1.0,0.0] #Blade shape, magnitude is relevant
-# bshapex_biwing_L = LinRange(R_root,R_biwing,N_control) #Blade shape, magnitude is relevant
-# bshapez_biwing_L = [-12.0,-8.0,-6.0,-4.0,0.0] #Blade shape, magnitude is relevant
-# bshapex_tip = LinRange(R_biwing,R_tip,N_control) #Blade shape, magnitude is relevant
-# bshapez_tip = zeros(N_control) #Blade shape, magnitude is relevant
-
-# bladelen = sum(sqrt.((shapeX[2:end].-shapeX[1:end-1]).^2 .+ (shapeY[2:end].-shapeY[1:end-1]).^2 ))
-# println("bladelen: $bladelen")
-
-
+verbosity = 1
 ntelem = 20 #tower elements
 nbelem = 60 #blade elements
 nselem = 10
@@ -46,12 +26,12 @@ nselem = 10
 delta_t=0.05
 numTS=10
 Nbld = 3
-Blade_Height = 5.0
+Blade_Height = 10.0
 Blade_Radius = 100.0
 RPM= 10.0
 Vinf = 10.0
 eta = 0.5
-AModel="AD"
+AeroModel="AD"
 structuralModel = "GX"
 
 shapeZ = [0,0.45,0.89,0.9,1].*Blade_Height
@@ -89,12 +69,12 @@ mass_breakout_blds,mass_breakout_twr,system, assembly, sections,AD15bldNdIdxRng,
     AD15hubR = 1.0,
     windINPfilename="$(path)/data/turbsim/350mx350m_30x30_20msETM.bts",
     ifw_libfile=nothing,
-    NuMad_geom_xlscsv_file_twr = "$path/data/NuMAD_Geom_ARCUS330m_tower_DecDesign_noprebend_biwing.csv",
-    NuMad_mat_xlscsv_file_twr = "$path/data/NuMAD_Materials_ARCUS330m_DecDesign.csv",
-    NuMad_geom_xlscsv_file_bld = "$path/data/NuMAD_Geom_ARCUS330m_blades_DecDesign_noprebend_biwing.csv",
-    NuMad_mat_xlscsv_file_bld = "$path/data/NuMAD_Materials_ARCUS330m_DecDesign.csv",
-    NuMad_geom_xlscsv_file_strut = ["$path/data/NuMAD_Geom_SNL_5MW_Struts.csv"],
-    NuMad_mat_xlscsv_file_strut = "$path/data/NuMAD_Materials_ARCUS330m_DecDesign.csv",
+    NuMad_geom_xlscsv_file_twr = "$path/data/tower_NuMAD.csv",
+    NuMad_mat_xlscsv_file_twr = "$path/data/materials_NuMAD.csv",
+    NuMad_geom_xlscsv_file_bld = "$path/data/blade_NuMAD.csv",
+    NuMad_mat_xlscsv_file_bld = "$path/data/materials_NuMAD.csv",
+    NuMad_geom_xlscsv_file_strut = ["$path/data/struts_NuMAD.csv"],
+    NuMad_mat_xlscsv_file_strut = "$path/data/materials_NuMAD.csv",
     Htwr_base=10.0,
     ntelem, 
     nbelem, 
@@ -103,12 +83,13 @@ mass_breakout_blds,mass_breakout_twr,system, assembly, sections,AD15bldNdIdxRng,
     joint_type = 0,
     strut_twr_mountpoint = [0.89],
     strut_bld_mountpoint = [0.89],
-    AModel, #AD, DMS, AC
-    DSModel="BV",
+    AeroModel, #AD, DMS, AC
+    DynamicStallModel="BV",
     RPI=true,
     cables_connected_to_blade_base = true,
     angularOffset = 0.0,
     meshtype = "Darrieus",
+    VTKmeshfilename = "$path/campbellVTK/HAWT_init",
     isHAWT=true)
 
 
@@ -159,7 +140,7 @@ pBC = [1 1 0
 1 5 0
 1 6 0]
 
-if AModel=="AD"
+if AeroModel=="AD"
     AD15On = true
 else
     AD15On = false
@@ -185,7 +166,7 @@ nothing
 # Then there are inputs for the finite element models, also, please see the api reference for specifics on the options (TODO: ensure that this is propogated to the docs)
 
 feamodel = OWENS.FEAModel(;analysisType = structuralModel,
-outFilename = "none",
+dataOutputFilename = "none",
 joint = myjoint,
 platformTurbineConnectionNodeNumber = 1,
 pBC,
@@ -201,33 +182,34 @@ nothing
 # Here is where we actually call the unsteady simulation and where owens pulls the aero and structural solutions together
 # and propogates things in time.
 
-println("Running Unsteady")
-t, aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,FReactionHist,
-FTwrBsHist,genTorque,genPower,torqueDriveShaft,uHist,uHist_prp,epsilon_x_hist,epsilon_y_hist,
-epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,FPtfmHist,FHydroHist,FMooringHist,
-topFexternal_hist,rbDataHist = OWENS.Unsteady_Land(inputs;system,assembly,
-topModel=feamodel,topMesh=mymesh,topEl=myel,aero=aeroForces,deformAero)
+# println("Running Unsteady")
+# t, aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,FReactionHist,
+# FTwrBsHist,genTorque,genPower,torqueDriveShaft,uHist,uHist_prp,epsilon_x_hist,epsilon_y_hist,
+# epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,FPtfmHist,FHydroHist,FMooringHist,
+# topFexternal_hist,rbDataHist = OWENS.Unsteady_Land(inputs;system,assembly,
+# topModel=feamodel,topMesh=mymesh,topEl=myel,aero=aeroForces,deformAero)
 
-azi=aziHist#./aziHist*1e-6
-saveName = "$path/vtk/biwing"
-tsave_idx=1:1:numTS-1
-OWENS.OWENSVTK(saveName,t,uHist,system,assembly,sections,aziHist,mymesh,myel,
-    epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,
-    FReactionHist,topFexternal_hist;tsave_idx)
+# azi=aziHist#./aziHist*1e-6
+# saveName = "$path/vtk/biwing"
+# tsave_idx=1:1:numTS-1
+# OWENS.OWENSVTK(saveName,t,uHist,system,assembly,sections,aziHist,mymesh,myel,
+#     epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,
+#     FReactionHist,topFexternal_hist;tsave_idx)
 
-massOwens,stress_U,SF_ult_U,SF_buck_U,stress_L,SF_ult_L,SF_buck_L,stress_TU,SF_ult_TU,
-SF_buck_TU,stress_TL,SF_ult_TL,SF_buck_TL,topstrainout_blade_U,topstrainout_blade_L,
-topstrainout_tower_U,topstrainout_tower_L,topDamage_blade_U,
-topDamage_blade_L,topDamage_tower_U,topDamage_tower_L = OWENS.extractSF(bld_precompinput,
-bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
-twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,
-mymesh,myel,myort,number_of_blades,epsilon_x_hist,kappa_y_hist,kappa_z_hist,epsilon_z_hist,
-kappa_x_hist,epsilon_y_hist;verbosity, #Verbosity 0:no printing, 1: summary, 2: summary and spanwise worst safety factor # epsilon_x_hist_1,kappa_y_hist_1,kappa_z_hist_1,epsilon_z_hist_1,kappa_x_hist_1,epsilon_y_hist_1,
-LE_U_idx=1,TE_U_idx=6,SparCapU_idx=3,ForePanelU_idx=2,AftPanelU_idx=5,
-LE_L_idx=1,TE_L_idx=6,SparCapL_idx=3,ForePanelL_idx=2,AftPanelL_idx=5,
-Twr_LE_U_idx=1,Twr_LE_L_idx=1,
-AD15bldNdIdxRng,AD15bldElIdxRng,strut_precompoutput=nothing) #TODO: add in ability to have material safety factors and load safety factors
+# massOwens,stress_U,SF_ult_U,SF_buck_U,stress_L,SF_ult_L,SF_buck_L,stress_TU,SF_ult_TU,
+# SF_buck_TU,stress_TL,SF_ult_TL,SF_buck_TL,topstrainout_blade_U,topstrainout_blade_L,
+# topstrainout_tower_U,topstrainout_tower_L,topDamage_blade_U,
+# topDamage_blade_L,topDamage_tower_U,topDamage_tower_L = OWENS.extractSF(bld_precompinput,
+# bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+# twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,
+# mymesh,myel,myort,Nbld,epsilon_x_hist,kappa_y_hist,kappa_z_hist,epsilon_z_hist,
+# kappa_x_hist,epsilon_y_hist;verbosity, #Verbosity 0:no printing, 1: summary, 2: summary and spanwise worst safety factor # epsilon_x_hist_1,kappa_y_hist_1,kappa_z_hist_1,epsilon_z_hist_1,kappa_x_hist_1,epsilon_y_hist_1,
+# Twr_LE_U_idx=1,Twr_LE_L_idx=1,
+# AD15bldNdIdxRng,AD15bldElIdxRng,strut_precompoutput=nothing) #TODO: add in ability to have material safety factors and load safety factors
 
+if AD15On
+    OWENS.OWENSOpenFASTWrappers.endAll()
+end
 
 ##############################################
 # Modal
@@ -248,29 +230,19 @@ FEAinputs = OWENS.FEAModel(;analysisType = "M",
         numNodes = mymesh.numNodes,
         numModes)  # number of modes to calculate)
 
-
-starttime2 = time()
 FEAinputs.analysisType = "GX"
+rotSpdArrayRPM = collect(LinRange(0.0,40.0,3)) # int
 freq2 = OWENS.AutoCampbellDiagram(FEAinputs,mymesh,myel,system,assembly,sections;
-    minRPM = 0.0,
-    maxRPM = 40.0,
-    NRPM = 9, # int
-    vtksavename="$path/campbellVTK/SNL34m",
+    rotSpdArrayRPM, # int
+    VTKsavename="$path/campbellVTK/HAWT",
     saveModes = [1,3,5], #must be int
+    saveRPM = [length(rotSpdArrayRPM)],
     mode_scaling = 500.0,
     )
- 
-rotSpdArrayRPM = LinRange(0.0, 40.0, 9) # int 
-freqGX = [freq2[:,i] for i=1:2:FEAinputs.numModes-6-2]
-elapsedtime2 = time() - starttime2
-
 
 PyPlot.figure()
-# for i=1:1:numModes-2
-#        PyPlot.plot(rotSpdArrayRPM,freqOW[:,i],color=plot_cycle[1],"b-") #plot mode i at various rotor speeds
-# end
-
 #plot per rev lines
+NperRevLines = 10
 for i=1:NperRevLines
     linex=[rotSpdArrayRPM[1], rotSpdArrayRPM[end]+5]
     liney=[rotSpdArrayRPM[1], rotSpdArrayRPM[end]+5].*i./60.0
@@ -280,10 +252,7 @@ end
 PyPlot.grid()
 PyPlot.xlabel("Rotor Speed (RPM)")
 PyPlot.ylabel("Frequency (Hz)")
-# PyPlot.plot(0,0,"k-",label="Experimental")
-# PyPlot.plot(0,0,color=plot_cycle[1],"-",label="OWENS")
 PyPlot.legend()
-# PyPlot.ylim([0.0,0.8])
 # PyPlot.savefig("$(path)/../figs/34mCampbell.pdf",transparent = true)
 
 # Add to figure
