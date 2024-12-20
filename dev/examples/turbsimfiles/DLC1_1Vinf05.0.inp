@@ -19,7 +19,7 @@ True      Clockwise   - Clockwise rotation looking downwind? (Used only for FF b
 38 NumGrid_Z - Vertical grid-point matrix dimension
 26 NumGrid_Y - Horizontal grid-point matrix dimension
 0.05 TimeStep - Time step [s]
-600.0 AnalysisTime - Length of analysis time series [s] (program will add time if necessary)
+60.0 AnalysisTime - Length of analysis time series [s] (program will add time if necessary)
 "ALL"     UsableTime  - Usable length of output time series [s] (GridWidth/MeanHHWS s added if not "ALL")
 42.600400040000004 HubHt - Hub height [m] (should be > 0.5*GridHeight)
 63.90060006 GridHeight - Grid height [m]
