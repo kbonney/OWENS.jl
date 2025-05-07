@@ -1,264 +1,398 @@
 # * `strut_twr_mountpoint::float` = [0.01,0.5,0.9], # factor of blade height where the bottom strut attaches on the tower # This puts struts at top and bottom, as a fraction of the blade position
 # * `strut_bld_mountpoint::float` = [0.01,0.5,0.9], # factor of blade height where the bottom strut attaches on the blade # This puts struts at bottom 0, mid 0.5, and top 1.0 as a fraction of the blade position
 # NuMad_geom_xlscsv_file_strut = nothing, or sting for the filename, or array of strings matching length of Nstruts (length(strut_twr_mountpoint))
-function setupOWENS(OWENSAero,path;
-    rho = 1.225,
-    mu = 1.7894e-5,
-    Nslices = 30,
-    ntheta = 30,
-    RPM = 1e-6,
-    Vinf = 25.0,
-    eta = 0.5,
-    B = 3,
-    H = 5.0,
-    R = 2.5,
-    shapeZ = collect(LinRange(0,H,Nslices+1)),
-    shapeX = R.*(1.0.-4.0.*(shapeZ/H.-.5).^2),#shapeX_spline(shapeZ)
-    ntelem = 10, #tower elements
-    nbelem = 60, #blade elements
-    ncelem = 10,
-    nselem = 5,
-    shapeY = zeros(Nslices+1),
-    ifw=false,
-    AD15hubR = 0.1,
-    WindType=1,
-    delta_t = 0.01,
-    numTS = 100,
-    adi_lib = "$(path)../../../../openfast/build/modules/aerodyn/libaerodyn_inflow_c_binding",
-    adi_rootname = "./Example",
-    windINPfilename="$(path)/data/turbsim/115mx115m_30x30_25.0msETM.bts",
-    ifw_libfile = nothing,
-    NuMad_geom_xlscsv_file_twr = nothing,
-    NuMad_mat_xlscsv_file_twr = nothing,
-    NuMad_geom_xlscsv_file_bld = nothing,
-    NuMad_mat_xlscsv_file_bld = nothing,
-    NuMad_geom_xlscsv_file_strut = nothing,
-    NuMad_mat_xlscsv_file_strut = nothing,
-    stack_layers_bld = nothing,
-    stack_layers_scale = [1.0,1.0],
-    chord_scale = [1.0,1.0],
-    thickness_scale = [1.0,1.0],
-    Htwr_base = 2.0,
-    Htwr_blds = H,
-    strut_twr_mountpoint = [0.25,0.75],
-    strut_bld_mountpoint = [0.25,0.75],
-    joint_type = 2,
-    c_mount_ratio = 0.05,
-    angularOffset = -pi/2,
-    AeroModel="DMS",
-    DynamicStallModel="BV",
-    RPI=true,
-    Aero_AddedMass_Active = false,
-    Aero_RotAccel_Active = false,
-    Aero_Buoyancy_Active = false,
-    cables_connected_to_blade_base = true,
-    meshtype = "Darrieus",
-    custommesh = nothing,
-    AddedMass_Coeff_Ca = 0.0,
-    verbosity=0,
-    VTKmeshfilename = nothing) #Darrieus, H-VAWT, ARCUS
-    
-    custom_mesh_outputs = []
 
-    if AeroModel=="AD"
-        AD15On = true
-    else
-        AD15On = false
-    end
+# Output Structs
+struct BladeProperties
+    numadIn_bld::NuMad  # Blade geometry from NuMad
+    bld_precompinput::Vector{OWENSPreComp.Input}
+    bld_precompoutput::Vector{OWENSPreComp.Output}
+    plyprops_bld::Any  # Blade ply properties
+    lam_U_bld::Matrix{Composites.Laminate}  # Upper laminate for blade
+    lam_L_bld::Matrix{Composites.Laminate}  # Lower laminate for blade
+    mass_breakout_blds::Vector{Float64}  # Mass breakout for blades
+    mass_bld::Vector{Matrix{Float64}}  # Blade mass matrices
+    stiff_bld::Vector{Matrix{Float64}}  # Blade stiffness matrices
+end
 
-    if minimum(shapeZ)!=0
-        @error "blade shapeZ must start at 0.0"
-    end
+struct TowerProperties
+    numadIn_twr::NuMad  # Tower geometry from NuMad
+    twr_precompinput::Vector{OWENSPreComp.Input}
+    twr_precompoutput::Vector{OWENSPreComp.Output}
+    plyprops_twr::Any  # Tower ply properties
+    lam_U_twr::Matrix{Composites.Laminate}  # Upper laminate for tower
+    lam_L_twr::Matrix{Composites.Laminate}  # Lower laminate for tower
+    mass_breakout_twr::Vector{Float64}  # Mass breakout for tower
+    mass_twr::Vector{Matrix{Float64}}  # Tower mass matrices
+    stiff_twr::Vector{Matrix{Float64}}  # Tower stiffness matrices
+end
 
-    if AddedMass_Coeff_Ca>0.0
-        centrifugal_force_flag = true
-    else
-        centrifugal_force_flag = false
-    end
 
-    # Here is where we take the inputs from setupOWENS and break out what is going on behind the function.
-    # We do some intermediate calculations on the blade shape and angles
 
-    Nstrutperbld = length(strut_twr_mountpoint)
+struct MeshOutputs
+    mymesh::OWENSFEA.Mesh
+    myort::OWENSFEA.Ort
+    myjoint::Array{float}#OWENSFEA.FEAModel.joint
+    AD15bldNdIdxRng::Matrix{Int}  # Blade node index range for AeroDyn
+    AD15bldElIdxRng::Matrix{Int}  # Blade element index range for AeroDyn
+    custom_mesh_outputs::Vector{Any}  # Any custom mesh outputs
+end
 
-    Nbld = B
-    H = maximum(shapeZ) #m,
-    R = maximum(shapeX) #m,
-    omega = RPM / 60 * 2 * pi
-    tsr = omega*R/Vinf
-    
-    nothing
-    
-    # Here we set up the mesh using one of the pre-made meshing functions.  For this case, there is a function for the ARCUS, as 
-    # well as for towered VAWTs where you can have an arbitrary blade shape with connected struts, and if the blade tips touch
-    # the tower, then you can tell it to constrain them to the tower thus allowing for both H-VAWT and Darrieus designs.
-    
-    #########################################
-    ### Set up mesh
-    #########################################
-    if meshtype == "ARCUS" && custommesh == nothing #TODO, for all of these propogate the AeroDyn additional output requirements
-        mymesh,myort,myjoint, AD15bldNdIdxRng, AD15bldElIdxRng = OWENS.create_arcus_mesh(;Htwr_base,
-            Hbld = H, #blade height
-            R, # m bade radius
-            nblade = Nbld,
-            ntelem, #tower elements
-            nbelem, #blade elements
-            ncelem,
-            c_mount_ratio,
-            bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-            bshapez = shapeZ,
+struct AerodynamicModelOutputs
+    aeroForces::Function  # Function handle for calculating aerodynamic forces
+    deformAero::Function  # Function handle for deforming the aerodynamic model
+    ad_input_file::Union{String, Nothing}  # Path to AeroDyn input file
+    ifw_input_file::Union{String, Nothing}  # Path to inflow wind file
+    blade_filenames::Union{Vector{String}, Nothing}  # Array of blade geometry file paths
+    blade_chords::Union{Vector{Vector{Float64}}, Nothing}  # Array of blade chord distributions
+    blade_Nnodes::Union{Vector{Int}, Nothing}  # Array of number of nodes per blade
+    airfoil_filenames::Union{Vector{String}, Nothing}  # Array of airfoil file paths
+end
+
+struct SectionalPropertiesOutputs
+    myel::Any #OWENSFEA.El  # Element object
+    system::Any # OWENSFEA.System  # System object
+    assembly::Any # OWENSFEA.Assembly  # Assembly object
+    sections::Any # Vector{OWENSFEA.Section}  # Vector of section objects
+end
+
+struct StrutProperties
+    numadIn_bld::NuMad  # Blade geometry from NuMad
+    numadIn_strut::Vector{NuMad}  # Strut geometry from NuMad
+    numadIn_twr::NuMad  # Tower geometry from NuMad
+    strut_precompoutput::Vector{Vector{OWENSPreComp.Output}}  # Strut precomp output
+    strut_precompinput::Vector{Vector{OWENSPreComp.Input}}  # Strut precomp input
+    lam_U_strut::Vector{Matrix{Composites.Laminate}}  # Upper laminate for struts
+    lam_L_strut::Vector{Matrix{Composites.Laminate}}  # Lower laminate for struts
+    lam_W_strut::Vector{Matrix{Composites.Laminate}}  # Web laminate for struts
+    sectionPropsArray_strut::Vector{Vector{OWENSFEA.SectionPropsArray}}  # Strut section properties
+    stiff_strut::Vector{Vector{Matrix{Float64}}}  # Strut stiffness matrices
+    mass_strut::Vector{Vector{Matrix{Float64}}}  # Strut mass matrices
+    mass_breakout_struts::Vector{Float64}  # Mass breakout for struts
+    plyprops_strut::Vector{Any}  # Strut ply properties
+    coststruts::Float64  # Cost of struts
+end
+
+
+# Core Configuration Structs
+struct MeshConfig
+    Nslices::Int
+    ntheta::Int
+    ntelem::Int
+    nbelem::Int
+    ncelem::Int
+    nselem::Int
+    meshtype::String
+    custommesh::Union{Nothing,Function}
+    connectBldTips2Twr::Bool
+    AD15_ccw::Bool
+    verbosity::Int
+end
+
+struct TowerConfig
+    Htwr_base::Float64
+    Htwr_blds::Float64
+    strut_twr_mountpoint::Vector{Float64}
+    strut_bld_mountpoint::Vector{Float64}
+    joint_type::Int
+    c_mount_ratio::Float64
+    angularOffset::Float64
+    NuMad_geom_xlscsv_file_twr::Union{Nothing,String}
+    NuMad_mat_xlscsv_file_twr::Union{Nothing,String}
+end
+
+struct BladeConfig
+    B::Int
+    H::Float64
+    R::Float64
+    shapeZ::Vector{Float64}
+    shapeX::Vector{Float64}
+    shapeY::Vector{Float64}
+    NuMad_geom_xlscsv_file_bld::Union{Nothing,String}
+    NuMad_mat_xlscsv_file_bld::Union{Nothing,String}
+end
+
+struct MaterialConfig
+    stack_layers_bld::Union{Nothing,Matrix{Float64}}
+    stack_layers_scale::Vector{Float64}
+    chord_scale::Vector{Float64}
+    thickness_scale::Vector{Float64}
+end
+
+struct AeroConfig
+    rho::Float64
+    mu::Float64
+    RPM::Float64
+    Vinf::Float64
+    eta::Float64
+    ifw::Bool
+    AD15hubR::Float64
+    WindType::Int
+    AeroModel::String
+    DynamicStallModel::String
+    RPI::Bool
+end
+
+# Factory functions for default configurations
+function default_mesh_config()
+    MeshConfig(
+        Nslices = 30,
+        ntheta = 30,
+        ntelem = 10,
+        nbelem = 60,
+        ncelem = 10,
+        nselem = 5,
+        meshtype = "Darrieus",
+        custommesh = nothing,
+        connectBldTips2Twr = false,
             AD15_ccw = true,
-            joint_type, #hinged about y axis
-            cables_connected_to_blade_base,
-            angularOffset) #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-    elseif (meshtype == "Darrieus" || meshtype == "H-VAWT") && custommesh == nothing
-        
-        if meshtype == "Darrieus"
-            connectBldTips2Twr = true
-        else
-            connectBldTips2Twr = false
-        end
+        verbosity = 0
+    )
+end
+
+function default_tower_config()
+    TowerConfig(
+        Htwr_base = 2.0,
+        Htwr_blds = 5.0,
+        strut_twr_mountpoint = [0.25, 0.75],
+        strut_bld_mountpoint = [0.25, 0.75],
+        joint_type = 2,
+        c_mount_ratio = 0.05,
+        angularOffset = -pi/2,
+        NuMad_geom_xlscsv_file_twr = nothing,
+        NuMad_mat_xlscsv_file_twr = nothing
+    )
+end
+
+function default_blade_config()
+    BladeConfig(
+        B = 3,
+        H = 5.0,
+        R = 2.5,
+        shapeZ = collect(LinRange(0, 5.0, 31)),
+        shapeX = 2.5 .* (1.0 .- 4.0 .* (collect(LinRange(0, 5.0, 31))/5.0 .- 0.5).^2),
+        shapeY = zeros(31),
+        NuMad_geom_xlscsv_file_bld = nothing,
+        NuMad_mat_xlscsv_file_bld = nothing
+    )
+end
+
+function default_material_config()
+    MaterialConfig(
+        stack_layers_bld = nothing,
+        stack_layers_scale = [1.0, 1.0],
+        chord_scale = [1.0, 1.0],
+        thickness_scale = [1.0, 1.0]
+    )
+end
+
+function default_aero_config()
+    AeroConfig(
+        rho = 1.225,
+        mu = 1.7894e-5,
+        RPM = 1e-6,
+        Vinf = 25.0,
+        eta = 0.5,
+        ifw = false,
+        AD15hubR = 0.1,
+        WindType = 1,
+        AeroModel = "DMS",
+        DynamicStallModel = "BV",
+        RPI = true
+    )
+end
+
+# Validation functions
+function validate_blade_shape(shapeZ::Vector{Float64})
+    if minimum(shapeZ) != 0
+        error("blade shapeZ must start at 0.0")
+    end
+end
+
+function validate_mesh_type(meshtype::String)
+    if !(meshtype in ["ARCUS", "Darrieus", "H-VAWT"])
+        error("Invalid mesh type. Must be one of: ARCUS, Darrieus, H-VAWT")
+    end
+end
+
+# Component setup functions
+function setup_mesh(mesh_config::MeshConfig, blade_config::BladeConfig, tower_config::TowerConfig)
+    validate_mesh_type(mesh_config.meshtype)
     
-        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng = OWENS.create_mesh_struts(;Htwr_base,
-            Htwr_blds,
-            Hbld = H, #blade height
-            R, # m bade radius
-            AD15hubR, #TODO: hook up with AD15 file generation
-            nblade = Nbld,
-            ntelem, #tower elements
-            nbelem, #blade elements
-            nselem,
-            strut_twr_mountpoint,
-            strut_bld_mountpoint,
-            bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-            bshapez = shapeZ,
-            bshapey = shapeY, # but magnitude for this is relevant
-            angularOffset, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-            AD15_ccw = true,
-            verbosity, # 0 nothing, 1 basic, 2 lots: amount of printed information
-            connectBldTips2Twr)
-    elseif custommesh != nothing
-        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs = custommesh(;Htwr_base,
-        Htwr_blds,
-        Hbld = H, #blade height
-        R, # m bade radius
-        AD15hubR, #TODO: hook up with AD15 file generation
-        nblade = Nbld,
-        ntelem, #tower elements
-        nbelem, #blade elements
-        nselem,
-        strut_twr_mountpoint,
-        strut_bld_mountpoint,
-        bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-        bshapez = shapeZ,
-        bshapey = shapeY, # but magnitude for this is relevant
-        angularOffset, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-        AD15_ccw = true,
-        verbosity, # 0 nothing, 1 basic, 2 lots: amount of printed information)
+    if mesh_config.meshtype == "ARCUS" && mesh_config.custommesh === nothing
+        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs = OWENS.create_arcus_mesh(;
+            Htwr_base = tower_config.Htwr_base,
+            Hbld = blade_config.H,
+            R = blade_config.R,
+            nblade = blade_config.B,
+            ntelem = mesh_config.ntelem,
+            nbelem = mesh_config.nbelem,
+            ncelem = mesh_config.ncelem,
+            c_mount_ratio = tower_config.c_mount_ratio,
+            bshapex = blade_config.shapeX,
+            bshapez = blade_config.shapeZ,
+            AD15_ccw = mesh_config.AD15_ccw,
+            joint_type = tower_config.joint_type,
+            cables_connected_to_blade_base = false,
+            angularOffset = tower_config.angularOffset
+        ), [];
+    elseif (mesh_config.meshtype == "Darrieus" || mesh_config.meshtype == "H-VAWT") && mesh_config.custommesh === nothing
+        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs = OWENS.create_mesh_struts(;
+            Htwr_base = tower_config.Htwr_base,
+            Htwr_blds = tower_config.Htwr_blds,
+            Hbld = blade_config.H,
+            R = blade_config.R,
+            AD15hubR = 0.1,  # TODO: Make this configurable
+            nblade = blade_config.B,
+            ntelem = mesh_config.ntelem,
+            nbelem = mesh_config.nbelem,
+            nselem = mesh_config.nselem,
+            strut_twr_mountpoint = tower_config.strut_twr_mountpoint,
+            strut_bld_mountpoint = tower_config.strut_bld_mountpoint,
+            bshapex = blade_config.shapeX,
+            bshapez = blade_config.shapeZ,
+            bshapey = blade_config.shapeY,
+            angularOffset = tower_config.angularOffset,
+            AD15_ccw = mesh_config.AD15_ccw,
+            verbosity = mesh_config.verbosity,
+            connectBldTips2Twr = mesh_config.connectBldTips2Twr
+        ), [];
+    elseif mesh_config.custommesh !== nothing
+        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs = mesh_config.custommesh(;
+            Htwr_base = tower_config.Htwr_base,
+            Htwr_blds = tower_config.Htwr_blds,
+            Hbld = blade_config.H,
+            R = blade_config.R,
+            AD15hubR = 0.1,  # TODO: Make this configurable
+            nblade = blade_config.B,
+            ntelem = mesh_config.ntelem,
+            nbelem = mesh_config.nbelem,
+            nselem = mesh_config.nselem,
+            strut_twr_mountpoint = tower_config.strut_twr_mountpoint,
+            strut_bld_mountpoint = tower_config.strut_bld_mountpoint,
+            bshapex = blade_config.shapeX,
+            bshapez = blade_config.shapeZ,
+            bshapey = blade_config.shapeY,
+            angularOffset = tower_config.angularOffset,
+            AD15_ccw = mesh_config.AD15_ccw,
+            verbosity = mesh_config.verbosity
         )
-    else #TODO unify with HAWT
-        error("please choose a valid mesh type (Darrieus, H-VAWT, ARCUS)")
+    else
+        error("Invalid mesh configuration")
+    end
+    return MeshOutputs(
+        mymesh=mymesh,
+        myort=myort,
+        myjoint=myjoint,
+        AD15bldNdIdxRng=AD15bldNdIdxRng,
+        AD15bldElIdxRng=AD15bldElIdxRng,
+        custom_mesh_outputs=custom_mesh_outputs
+    )
+end
+
+
+function setup_blade(blade_config::BladeConfig, material_config::MaterialConfig, path::String)
+    # Get blade geometry
+    if !isnothing(blade_config.NuMad_geom_xlscsv_file_bld)
+        numadIn_bld = OWENS.readNuMadGeomCSV(blade_config.NuMad_geom_xlscsv_file_bld; section=:blade)
+    else
+        numadIn_bld = create_default_blade_sectional_properties()
     end
 
-    nTwrElem = Int(mymesh.meshSeg[1])+1
+    # Apply scaling factors
+    for icol = 1:length(numadIn_bld.stack_layers[1,:])
+        numadIn_bld.stack_layers[:,icol] .*= LinRange(blade_config.stack_layers_scale[1], 
+                                                     blade_config.stack_layers_scale[2], 
+                                                     length(numadIn_bld.chord))
+    end
+    numadIn_bld.chord .*= LinRange(blade_config.chord_scale[1], 
+                                  blade_config.chord_scale[2], 
+                                  length(numadIn_bld.chord))
+
+    # Update airfoil paths
+    for (i,airfoil) in enumerate(numadIn_bld.airfoil)
+        numadIn_bld.airfoil[i] = "$path/airfoils/$airfoil"
+    end
+
+    # Get blade material properties
+    if !isnothing(blade_config.NuMad_mat_xlscsv_file_bld)
+        plyprops_bld = OWENS.readNuMadMatCSV(blade_config.NuMad_mat_xlscsv_file_bld)
+    else
+        plyprops_bld = create_default_material_properites()
+    end
+
+    # Calculate blade properties
+    bld_precompoutput, bld_precompinput, lam_U_bld, lam_L_bld, lam_W_bld = 
+        OWENS.getOWENSPreCompOutput(numadIn_bld; plyprops=plyprops_bld)
+
+    # Calculate mass breakout
+    mass_breakout_bld = OWENS.get_material_mass(plyprops_bld, numadIn_bld)
+    mass_breakout_blds = mass_breakout_bld .* blade_config.B
+
+    return BladeProperties(
+        numadIn_bld=numadIn_bld,
+        bld_precompinput=bld_precompinput,
+        bld_precompoutput=bld_precompoutput,
+        plyprops_bld=plyprops_bld,
+        lam_U_bld=lam_U_bld,
+        lam_L_bld=lam_L_bld,
+        mass_breakout_blds=mass_breakout_blds,
+        mass_bld=Vector{Matrix{Float64}}(),  # Will be filled in later
+        stiff_bld=Vector{Matrix{Float64}}()  # Will be filled in later
+    )
+end
+
+function setup_tower(tower_config::TowerConfig, material_config::MaterialConfig)
+    # Get tower geometry
+    if !isnothing(tower_config.NuMad_geom_xlscsv_file_twr)
+        numadIn_twr = OWENS.readNuMadGeomCSV(tower_config.NuMad_geom_xlscsv_file_twr; section=:tower)
+    else
+        numadIn_twr = create_default_tower_sectional_properties()
+    end
+
+    # Get tower material properties
+    if !isnothing(tower_config.NuMad_mat_xlscsv_file_twr)
+        plyprops_twr = OWENS.readNuMadMatCSV(tower_config.NuMad_mat_xlscsv_file_twr)
+    else
+        plyprops_twr = create_default_material_properites()
+    end
+
+    # Calculate tower properties
+    twr_precompoutput, twr_precompinput, lam_U_twr, lam_L_twr, lam_W_twr = 
+        OWENS.getOWENSPreCompOutput(numadIn_twr; plyprops=plyprops_twr)
+
+    # Calculate mass breakout
+    mass_breakout_twr = OWENS.get_material_mass(plyprops_twr, numadIn_twr)
+
+    return TowerProperties(
+        numadIn_twr=numadIn_twr,
+        twr_precompinput=twr_precompinput,
+        twr_precompoutput=twr_precompoutput,
+        plyprops_twr=plyprops_twr,
+        lam_U_twr=lam_U_twr,
+        lam_L_twr=lam_L_twr,
+        mass_breakout_twr=mass_breakout_twr,
+        mass_twr=Vector{Matrix{Float64}}(),  # Will be filled in later
+        stiff_twr=Vector{Matrix{Float64}}()  # Will be filled in later
+    )
+end
+
+function setup_sectional_properties(blade_config::BladeConfig, tower_config::TowerConfig)
+    # Handle tower sectional properties
+    if !isnothing(tower_config.NuMad_geom_xlscsv_file_twr)
+        numadIn_twr = OWENS.readNuMadGeomCSV(tower_config.NuMad_geom_xlscsv_file_twr; section=:tower)
+    else
+        # Default tower sectional properties
+        numadIn_twr = create_default_tower_sectional_properties()
+    end
     
-    nothing
-
-    # Here is a way that you can visualize the nodal numbers of the mesh
-
-    # PyPlot.figure()
-    # PyPlot.plot(mymesh.x,mymesh.z,"b-")
-    # for myi = 1:length(mymesh.x)
-    #     PyPlot.text(mymesh.x[myi].+rand()/30,mymesh.z[myi].+rand()/30,"$myi",ha="center",va="center")
-    #     PyPlot.draw()
-    #     #sleep(0.1)
-    # end
-    # PyPlot.xlabel("x")
-    # PyPlot.ylabel("y")
-
-    # This is where the sectional properties for the tower are either read in from the file, or are directly input and could be manuplated here in the script
-
-    #########################################
-    ### Set up Sectional Properties
-    #########################################
-
-    if !isnothing(NuMad_geom_xlscsv_file_twr)
-        numadIn_twr = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_twr;section=:tower)
+    # Handle blade sectional properties
+    if !isnothing(blade_config.NuMad_geom_xlscsv_file_bld)
+        numadIn_bld = OWENS.readNuMadGeomCSV(blade_config.NuMad_geom_xlscsv_file_bld; section=:blade)
     else
-        n_web = 0
-        n_stack = 2
-        n_segments = 2
-        span = [0.0, 6.607421057, 13.21484211, 19.82226317, 26.42968423, 33.03710529, 39.64452634, 46.2519474, 52.85936846, 59.46678951, 66.07421057, 72.68163163, 79.28905268, 85.89647374, 92.5038948, 99.11131586, 105.7187369, 112.326158, 118.933579, 125.5410001, 132.1484211]
-        airfoil = ["circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular"]
-        te_type = ["round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round"]
-        twist_d = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        chord = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.25, 0.25, 0.25]
-        xoffset = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
-        aerocenter = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
-        stack_mat_types = [8, 2]
-        stack_layers = [70 3; 70 3; 70 3; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03]
-        segments = [-1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0]
-        DPtypes = ["" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""]
-        skin_seq = [Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2])]
-        web_seq = Array{Seq, 2}(undef, length(twist_d),0) #can be any number of stack nums, so we have to make non-square containers
-        web_dp = Array{Seq, 2}(undef, length(twist_d),0) #this is fixed size square, but it's easier to do it this way
+        # Default blade sectional properties
+        numadIn_bld = create_default_blade_sectional_properties()
 
-        numadIn_twr = NuMad(n_web,n_stack,n_segments,span,airfoil,te_type,twist_d,chord,xoffset,aerocenter,stack_mat_types,stack_layers,segments,DPtypes,skin_seq,web_seq,web_dp)
-    end
-
-    #### Add the full path
-    for (i,airfoil) in enumerate(numadIn_twr.airfoil)
-        numadIn_twr.airfoil[i] = "$path/airfoils/$airfoil"
-    end
-
-    nothing
-
-    # Here is where the material properties for the tower are either read in from the file, or directly input
-
-    if !isnothing(NuMad_mat_xlscsv_file_twr)
-        plyprops_twr = OWENS.readNuMadMaterialsCSV(NuMad_mat_xlscsv_file_twr)
-    else
-        names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
-        plies = [Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.0008100000000000001), Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001), Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5), Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 1.0e9, 1.0e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)]
-        plyprops_twr = OWENS.plyproperties(names,plies)
-    end
-
-    # Then this is where precomp.jl is called to get first the precomp outputs, then formatting those into the OWENS format, and then in the GXBeam.jl format for if GXBeam is used as the structural solver.
-
-    twr_precompoutput,twr_precompinput,lam_U_twr,lam_L_twr,lam_W_twr = OWENS.getOWENSPreCompOutput(numadIn_twr;plyprops = plyprops_twr)
-    sectionPropsArray_twr = OWENS.getSectPropsFromOWENSPreComp(LinRange(0,1,nTwrElem),numadIn_twr,twr_precompoutput;precompinputs=twr_precompinput,fluid_density=rho,AddedMass_Coeff_Ca)
-    stiff_twr, mass_twr = OWENS.getSectPropsFromOWENSPreComp(LinRange(0,1,nTwrElem),numadIn_twr,twr_precompoutput;precompinputs=twr_precompinput,GX=true,fluid_density=rho,AddedMass_Coeff_Ca)
-
-    nothing
-
-    # For the blades, we repeat what was done for the tower, but also include some simple design options for scaling thicknesses,
-    if !isnothing(NuMad_geom_xlscsv_file_bld)
-        numadIn_bld = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_bld;section=:blade)
-    else
-        n_web = 1
-        n_stack = 7
-        n_segments = 12
-        span = [0.0, 6.607, 13.215, 19.822, 26.43, 33.037, 39.645, 46.252, 52.859, 59.467, 66.074, 72.682, 79.289, 85.896, 92.504, 99.111, 105.719, 112.326, 118.934, 125.541, 132.148]
-        airfoil = ["circular", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021"]
-        te_type = ["round", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp"]
-        twist_d = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        chord = [10.0, 10.0, 9.0, 8.0, 8.0, 7.0, 7.0, 6.0, 6.0, 6.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
-        xoffset = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
-        aerocenter = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
-        stack_mat_types = [8, 2, 4, 8, 8, 8, 4]
-        if isnothing(stack_layers_bld)
-            stack_layers = [30.0 2.0 15.0 25.0 25.0 2.0 13.0; 15.0 2.0 10.0 13.0 11.0 2.0 11.0; 10.0 1.0 8.0 10.0 10.0 2.0 10.0; 8.0 1.0 6.0 9.0 10.0 1.0 9.0; 7.0 1.0 5.0 8.0 9.0 1.0 7.0; 6.0 1.0 4.0 8.0 9.0 1.0 6.0; 6.0 1.0 4.0 8.0 8.0 1.0 5.0; 6.0 1.0 4.0 7.0 7.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 7.0 8.0 3.0 5.0; 7.0 2.0 3.0 9.0 12.0 3.0 6.0; 10.0 3.0 4.0 11.0 15.0 3.0 6.0; 12.0 3.0 4.0 13.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 10.0 1.0 4.0 10.0 12.0 1.0 5.0]
-        else
-            stack_layers = stack_layers_bld
-        end
-        segments = [-1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0]
-        DPtypes = ["" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""]
-        skin_seq = [Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2])]
-        web_seq = [Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]);;]
-        web_dp = [Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]);;]
-
-        numadIn_bld = NuMad(n_web,n_stack,n_segments,span,airfoil,te_type,twist_d,chord,xoffset,aerocenter,stack_mat_types,stack_layers,segments,DPtypes,skin_seq,web_seq,web_dp)
-    end
     for icol = 1:length(numadIn_bld.stack_layers[1,:])
         numadIn_bld.stack_layers[:,icol] .*= LinRange(stack_layers_scale[1],stack_layers_scale[2],length(numadIn_bld.chord))
     end
@@ -267,33 +401,35 @@ function setupOWENS(OWENSAero,path;
     for (i,airfoil) in enumerate(numadIn_bld.airfoil)
         numadIn_bld.airfoil[i] = "$path/airfoils/$airfoil"
     end
+    end
+    
+    return numadIn_twr, numadIn_bld
+end
 
-    if !isnothing(NuMad_mat_xlscsv_file_bld)
-        plyprops_bld = OWENS.readNuMadMaterialsCSV(NuMad_mat_xlscsv_file_bld)
+function setup_material_properties(tower_config::TowerConfig, blade_config::BladeConfig, material_config::MaterialConfig)
+    # Handle tower material properties
+    if !isnothing(tower_config.NuMad_mat_xlscsv_file_twr)
+        plyprops_twr = OWENS.readNuMadMatCSV(tower_config.NuMad_mat_xlscsv_file_twr)
     else
-        names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
-        plies = [Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.0008100000000000001), Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001), Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5), Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)]
-        plyprops_bld = OWENS.plyproperties(names,plies)
+        # Default tower material properties
+        plyprops_twr = create_default_material_properites()
     end
-
-    bld1start = Int(mymesh.structuralNodeNumbers[1,1]) #Get blade spanwise position
-    bld1end = Int(mymesh.structuralNodeNumbers[1,end])
-    spanpos = [0.0;cumsum(sqrt.(diff(mymesh.x[bld1start:bld1end]).^2 .+ diff(mymesh.y[bld1start:bld1end]).^2 .+ diff(mymesh.z[bld1start:bld1end]).^2))]
-
-    if length(thickness_scale)==2
-        yscale = collect(LinRange(thickness_scale[1],thickness_scale[2],length(numadIn_bld.span)))
-    elseif length(thickness_scale)==length(numadIn_bld.span)
-        yscale = thickness_scale
+    
+    # Handle blade material properties
+    if !isnothing(blade_config.NuMad_mat_xlscsv_file_bld)
+        plyprops_bld = OWENS.readNuMadMatCSV(blade_config.NuMad_mat_xlscsv_file_bld)
+    else
+        # Default blade material properties
+        plyprops_bld = create_default_material_properites()
     end
+    
+    return plyprops_twr, plyprops_bld
+end
 
-    bld_precompoutput,bld_precompinput,lam_U_bld,lam_L_bld,lam_W_bld = OWENS.getOWENSPreCompOutput(numadIn_bld;yscale,plyprops = plyprops_bld)
-    sectionPropsArray_bld = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_bld,bld_precompoutput;precompinputs=bld_precompinput,fluid_density=rho,AddedMass_Coeff_Ca)
-    stiff_bld, mass_bld = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_bld,bld_precompoutput;precompinputs=bld_precompinput,GX=true,fluid_density=rho,AddedMass_Coeff_Ca)
-
-    nothing
-
-    # Similarly for the struts, we do what was done for the blades
-    numadIn_strut = Array{NuMad, 1}(undef, Nstrutperbld)
+    
+function setup_struts(blade_config::BladeConfig, material_config::MaterialConfig, path::String, Nstrutperbld::Int)
+    # Initialize arrays for strut properties
+    numadIn_strut = Array{OrderedCollections.OrderedDict{Symbol, Any},1}(undef, Nstrutperbld)
     strut_precompoutput = Array{Array{OWENSPreComp.Output, 1},1}(undef, Nstrutperbld)
     strut_precompinput = Array{Array{OWENSPreComp.Input, 1},1}(undef, Nstrutperbld)
     lam_U_strut = Array{Array{Composites.Laminate, 2}}(undef, Nstrutperbld)
@@ -305,48 +441,39 @@ function setupOWENS(OWENSAero,path;
     mass_breakout_struts = []
     plyprops_strut = []
     coststruts = 0
+
+    # Process each strut
     for istrut = 1:Nstrutperbld
-        if !isnothing(NuMad_geom_xlscsv_file_strut)
-            if typeof(NuMad_geom_xlscsv_file_strut)==String
-                numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut)
-            elseif typeof(NuMad_geom_xlscsv_file_strut) == OrderedCollections.OrderedDict{Symbol, Any}
-                if length(NuMad_geom_xlscsv_file_strut[:components][:struts])==1
-                    numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut;section=:struts,subsection=1)
+        if !isnothing(blade_config.NuMad_geom_xlscsv_file_strut)
+            if typeof(blade_config.NuMad_geom_xlscsv_file_strut)==String
+                numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(blade_config.NuMad_geom_xlscsv_file_strut)
+            elseif typeof(blade_config.NuMad_geom_xlscsv_file_strut) == OrderedCollections.OrderedDict{Symbol, Any}
+                if length(blade_config.NuMad_geom_xlscsv_file_strut[:components][:struts])==1
+                    numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(blade_config.NuMad_geom_xlscsv_file_strut;section=:struts,subsection=1)
                 else
-                    numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut;section=:struts,subsection=istrut)
+                    numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(blade_config.NuMad_geom_xlscsv_file_strut;section=:struts,subsection=istrut)
                 end
             else
-                numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut[istrut])
+                numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(blade_config.NuMad_geom_xlscsv_file_strut[istrut])
             end
         else
+            # Default strut geometry
             n_web = 1
             n_stack = 7
             n_segments = 12
-            span = [0.0, 6.607, 13.215, 19.822, 26.43, 33.037, 39.645, 46.252, 52.859, 59.467, 66.074, 72.682, 79.289, 85.896, 92.504, 99.111, 105.719, 112.326, 118.934, 125.541, 132.148]
-            airfoil = ["circular", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021"]
-            te_type = ["round", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp"]
-            twist_d = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            chord = [10.0, 10.0, 9.0, 8.0, 8.0, 7.0, 7.0, 6.0, 6.0, 6.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
-            xoffset = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
-            aerocenter = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
-            stack_mat_types = [8, 2, 4, 8, 8, 8, 4]
-            if isnothing(stack_layers_strut)
-                stack_layers = [30.0 2.0 15.0 25.0 25.0 2.0 13.0; 15.0 2.0 10.0 13.0 11.0 2.0 11.0; 10.0 1.0 8.0 10.0 10.0 2.0 10.0; 8.0 1.0 6.0 9.0 10.0 1.0 9.0; 7.0 1.0 5.0 8.0 9.0 1.0 7.0; 6.0 1.0 4.0 8.0 9.0 1.0 6.0; 6.0 1.0 4.0 8.0 8.0 1.0 5.0; 6.0 1.0 4.0 7.0 7.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 7.0 8.0 3.0 5.0; 7.0 2.0 3.0 9.0 12.0 3.0 6.0; 10.0 3.0 4.0 11.0 15.0 3.0 6.0; 12.0 3.0 4.0 13.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 10.0 1.0 4.0 10.0 12.0 1.0 5.0]
-            else
-                stack_layers = stack_layers_strut
-            end
-            segments = [-1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0]
-            DPtypes = ["" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""]
-            skin_seq = [Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2])]
-            web_seq = [Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]);;]
-            web_dp = [Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]);;]
-
-            numadIn_strut[istrut] = NuMad(n_web,n_stack,n_segments,span,airfoil,te_type,twist_d,chord,xoffset,aerocenter,stack_mat_types,stack_layers,segments,DPtypes,skin_seq,web_seq,web_dp)
+            numadIn_strut[istrut] = OrderedCollections.OrderedDict{Symbol, Any}(
+                :span => collect(LinRange(0, 1.0, n_segments+1)),
+                :airfoil => fill("NACA0012", n_segments),
+                :chord => fill(0.1, n_segments),
+                :twist => zeros(n_segments),
+                :web => fill(n_web, n_segments),
+                :stack => fill(n_stack, n_segments)
+            )
         end
+
         for icol = 1:length(numadIn_strut[istrut].stack_layers[1,:])
             numadIn_strut[istrut].stack_layers[:,icol] .*= LinRange(stack_layers_scale[1],stack_layers_scale[2],length(numadIn_strut[istrut].chord))
         end
-        # numadIn_strut[istrut].chord .*= LinRange(chord_scale[1],chord_scale[2],length(numadIn_strut[istrut].chord))
 
         for (i,airfoil) in enumerate(numadIn_strut[istrut].airfoil)
             numadIn_strut[istrut].airfoil[i] = "$path/airfoils/$airfoil"
@@ -355,9 +482,7 @@ function setupOWENS(OWENSAero,path;
         if !isnothing(NuMad_mat_xlscsv_file_strut)
             plyprops_strut = OWENS.readNuMadMaterialsCSV(NuMad_mat_xlscsv_file_strut)
         else
-            names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
-            plies = [Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.0008100000000000001), Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001), Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5), Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)]
-            plyprops_strut = OWENS.plyproperties(names,plies)
+            plyprops_strut = create_default_material_properites()
         end
 
         if istrut == 1
@@ -383,183 +508,173 @@ function setupOWENS(OWENSAero,path;
         stiff_strut[istrut], mass_strut[istrut] = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_strut[istrut],strut_precompoutput[istrut];precompinputs=strut_precompinput[istrut],GX=true,fluid_density=rho,AddedMass_Coeff_Ca)
     end
 
-    nothing
+    return StrutProperties(
+        numadIn_bld = nothing,  # Not set in this function
+        numadIn_strut = numadIn_strut,
+        numadIn_twr = nothing,  # Not set in this function
+        strut_precompoutput = strut_precompoutput,
+        strut_precompinput = strut_precompinput,
+        lam_U_strut = lam_U_strut,
+        lam_L_strut = lam_L_strut,
+        lam_W_strut = lam_W_strut,
+        sectionPropsArray_strut = sectionPropsArray_strut,
+        stiff_strut = stiff_strut,
+        mass_strut = mass_strut,
+        mass_breakout_struts = mass_breakout_struts,
+        plyprops_strut = plyprops_strut,
+        coststruts = coststruts
+    )
+end
 
-    # Here we combine the section properties into an array matching the mesh elements
+
+function process_sectional_properties(
+    mesh_config::MeshConfig,
+    blade_config::BladeConfig,
+    tower_config::TowerConfig,
+    mesh_outputs::MeshOutputs,
+    blade_props::BladeProperties,
+    tower_props::TowerProperties,
+    strut_props::StrutProperties
+)
+    Nbld = blade_config.B
+    Nstrutperbld = length(tower_config.strut_twr_mountpoint)
+
+    # Use the fields from the structs
+    sectionPropsArray_twr = tower_props.twr_precompoutput
+    sectionPropsArray_bld = blade_props.bld_precompoutput
+    sectionPropsArray_strut = strut_props.sectionPropsArray_strut
+
+    stiff_twr = tower_props.stiff_twr
+    stiff_bld = blade_props.stiff_bld
+    stiff_strut = strut_props.stiff_strut
+
+    mass_twr = tower_props.mass_twr
+    mass_bld = blade_props.mass_bld
+    mass_strut = strut_props.mass_strut
+
+    mymesh = mesh_outputs.mymesh
+    myort = mesh_outputs.myort
+    myjoint = mesh_outputs.myjoint
+    
     bldssecprops = collect(Iterators.flatten(fill(sectionPropsArray_bld, Nbld)))
-    # strutssecprops = collect(Iterators.flatten(fill(sectionPropsArray_strut, Nstrutperbld*Nbld)))
 
-    if meshtype == "ARCUS"
-        sectionPropsArray = [sectionPropsArray_twr; bldssecprops]#; strutssecprops]#;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str]
-
+    if mesh_config.meshtype == "ARCUS"
+        sectionPropsArray = [sectionPropsArray_twr; bldssecprops]
         stiff_blds = collect(Iterators.flatten(fill(stiff_bld, Nbld)))
-        stiff_array = [stiff_twr; stiff_blds]#; stiff_struts]
-
+        stiff_array = [stiff_twr; stiff_blds]
         mass_blds = collect(Iterators.flatten(fill(mass_bld, Nbld)))
-        mass_array = [mass_twr; mass_blds]#; mass_struts]
+        mass_array = [mass_twr; mass_blds]
 
         for icable = 1:Nbld
             sectionPropsArray = [sectionPropsArray; sectionPropsArray_strut[1]]
-            stiff_array = [stiff_array;stiff_strut[1]]
-            mass_array = [mass_array;mass_strut[1]]
+            stiff_array = [stiff_array; stiff_strut[1]]
+            mass_array = [mass_array; mass_strut[1]]
         end
     else
-        sectionPropsArray = [sectionPropsArray_twr; bldssecprops]#; strutssecprops]#;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str]
-
+        sectionPropsArray = [sectionPropsArray_twr; bldssecprops]
         stiff_blds = collect(Iterators.flatten(fill(stiff_bld, Nbld)))
-        stiff_array = [stiff_twr; stiff_blds]#; stiff_struts]
-
+        stiff_array = [stiff_twr; stiff_blds]
         mass_blds = collect(Iterators.flatten(fill(mass_bld, Nbld)))
-        mass_array = [mass_twr; mass_blds]#; mass_struts]
+        mass_array = [mass_twr; mass_blds]
 
         for istrut = 1:Nstrutperbld
             for ibld = 1:Nbld
                 sectionPropsArray = [sectionPropsArray; sectionPropsArray_strut[istrut]]
-                stiff_array = [stiff_array;stiff_strut[istrut]]
-                mass_array = [mass_array;mass_strut[istrut]]
+                stiff_array = [stiff_array; stiff_strut[istrut]]
+                mass_array = [mass_array; mass_strut[istrut]]
             end
         end
     end
+
+    # Handle rotational effects
     rotationalEffects = ones(mymesh.numEl) #TODO: non rotating tower, or rotating blades
 
-    if length(sectionPropsArray)<mymesh.numEl
+    # Handle case where there are more mesh elements than sectional properties
+    if length(sectionPropsArray) < mymesh.numEl
         @warn "There are more mesh elements than sectional properties, applying the last strut's sectional properties to the remaining"
         n_diff = mymesh.numEl - length(sectionPropsArray)
-        sectionPropsArray = [sectionPropsArray; fill(sectionPropsArray_strut[end][2],n_diff)]
-        stiff_array = [stiff_array;fill(stiff_strut[end][2],n_diff)]
-        mass_array = [mass_array;fill(mass_strut[end][2],n_diff)]
+        sectionPropsArray = [sectionPropsArray; fill(sectionPropsArray_strut[end][2], n_diff)]
+        stiff_array = [stiff_array; fill(stiff_strut[end][2], n_diff)]
+        mass_array = [mass_array; fill(mass_strut[end][2], n_diff)]
     end
 
-    #### store data in element object
-    myel = OWENSFEA.El(sectionPropsArray,myort.Length,myort.Psi_d,myort.Theta_d,myort.Twist_d,rotationalEffects)
-    system, assembly, sections = OWENS.owens_to_gx(mymesh,myort,myjoint,sectionPropsArray,stiff_array,mass_array;VTKmeshfilename)
+    # Store data in element object
+    myel = OWENSFEA.El(sectionPropsArray, myort.Length, myort.Psi_d, myort.Theta_d, myort.Twist_d, rotationalEffects)
+    system, assembly, sections = OWENS.owens_to_gx(mymesh, myort, myjoint, sectionPropsArray, stiff_array, mass_array)
 
-    nothing
+    return SectionalPropertiesOutputs(
+        myel = myel,
+        system = system,
+        assembly = assembly,
+        sections = sections
+    )
+end
 
-    # Set up the OWENSAero aerodynamics if used
-    if !AD15On
-        #########################################
-        ### Set up aero forces
-        #########################################
-        #### translate from blade span to blade height between the numad definition and the vertical slice positions
-        #### First get the angles from the overall geometry npoints and go to the numad npoints
-        delta_xs = shapeX[2:end] - shapeX[1:end-1]
-        delta_zs = shapeZ[2:end] - shapeZ[1:end-1]
-        delta3D = atan.(delta_xs./delta_zs)
-        delta3D_spl = safeakima(shapeZ[1:end-1]./maximum(shapeZ[1:end-1]), delta3D,LinRange(0,1,length(numadIn_bld.span)-1))
-        #### now convert the numad span to a height
-        bld_height_numad = numadIn_bld.span/maximum(numadIn_bld.span)
-        bld_height_numad_unit = [bld_height_numad[i]+(bld_height_numad[i+1]-bld_height_numad[i])/2 for i = 1:length(bld_height_numad)-1].*(1.0.-abs.(sin.(delta3D_spl)))
-        # bld_height_numad_unit = cumsum(diff((bld_height_numad[2:end]+bld_height_numad[1:end-1])/2).*(1.0.-abs.(sin.(delta3D_spl[1:end-1]))))
 
-        #### now we can use it to access the numad data 
-        chord = safeakima(bld_height_numad_unit, numadIn_bld.chord,LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices))
-        airfoils = fill("nothing",Nslices)
 
-        twist = safeakima(bld_height_numad_unit, numadIn_bld.twist_d.*pi/180,LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices))
-
-        # Discretely assign the airfoils
-        for (iheight_numad,height_numad) in enumerate(bld_height_numad_unit)
-            for (iheight,height_slices) in enumerate(collect(LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices)))
-                if airfoils[iheight]=="nothing" && height_slices<=height_numad
-                    airfoils[iheight] = "$(numadIn_bld.airfoil[iheight_numad]).dat"
-                end
-            end
-        end
-        
-        # Map the element wise mass to the input aero shape
-        rhoA_el = [mass_bld[i][1,1] for i = 1:length(mass_bld)]
-        if AD15bldNdIdxRng[1,2]<AD15bldNdIdxRng[1,1]
-            bld_z_node = mymesh.z[AD15bldNdIdxRng[1,2]:AD15bldNdIdxRng[1,1]]
-        else
-            bld_z_node = mymesh.z[AD15bldNdIdxRng[1,1]:AD15bldNdIdxRng[1,2]]
-        end
-        bld_z_el = bld_z_node[1:end-1] .+ (bld_z_node[2:end].-bld_z_node[1:end-1])./2
-        rhoA_in = FLOWMath.akima(bld_z_el,rhoA_el,shapeZ)
-
-        OWENSAero.setupTurb(shapeX,shapeZ,B,chord,tsr,Vinf;AeroModel,DynamicStallModel,
-        afname = airfoils,
-        bld_y = shapeY,
-        rho,
-        twist, #TODO: verify twist is in same direction
-        mu,
-        eta,
-        ifw, #TODO: propogate WindType
-        turbsim_filename = windINPfilename,
-        ifw_libfile,
-        tau = [1e-5,1e-5],
-        Aero_AddedMass_Active,
-        Aero_RotAccel_Active,
-        Aero_Buoyancy_Active,
-        centrifugal_force_flag,
-        ntheta,
-        Nslices,
-        RPI,
-        rhoA_in)
-
-        aeroForcesACDMS(t,azi) = OWENS.mapACDMS(t,azi,mymesh,myel,OWENSAero.AdvanceTurbineInterpolate;alwaysrecalc=true)
-        deformAeroACDMS = OWENSAero.deformTurb
-    end
-    nothing
-
+function setup_aerodynamic_model(blade_config::BladeConfig, aero_config::AeroConfig, tower_config::TowerConfig,
+                               numadIn_bld, numadIn_strut, path::String)
     # Set up AeroDyn if used
-    # Here we create AeroDyn the files, first by specifying the names, then by creating the files, TODO: hook up the direct sectionPropsArray_str
-    # Then by initializing AeroDyn and grabbing the backend functionality with a function handle
-    if AD15On
+    if aero_config.AD15On
         ad_input_file = "$path/ADInputFile_SingleTurbine2.dat"
         ifw_input_file = "$path/IW2.dat"
         OLAF_filename = "$path/OLAF2.dat"
 
         NumADBldNds = NumADStrutNds = 10 
+        Nbld = blade_config.B
+        Nstrutperbld = length(tower_config.strut_twr_mountpoint)
 
-        bldchord_spl = safeakima(numadIn_bld.span./maximum(numadIn_bld.span), numadIn_bld.chord,LinRange(0,1,NumADBldNds))
+        # Process blade geometry
+        bldchord_spl = safeakima(numadIn_bld.span./maximum(numadIn_bld.span),
+                                numadIn_bld.chord, LinRange(0,1,NumADBldNds))
 
-        # Discretely assign the blade airfoils based on the next closest neighbor
-        bld_airfoil_filenames = fill("nothing",NumADBldNds) #TODO: cable drag?
-        for (ispan_numad,span_numad) in enumerate(numadIn_bld.span./maximum(numadIn_bld.span))
-            for (ispan,span_slices) in enumerate(collect(LinRange(0,1,NumADBldNds)))
+        # Assign blade airfoils based on the next closest neighbor
+        bld_airfoil_filenames = fill("nothing", NumADBldNds) #TODO: cable drag?
+        for (ispan_numad, span_numad) in enumerate(numadIn_bld.span./maximum(numadIn_bld.span))
+            for (ispan, span_slices) in enumerate(collect(LinRange(0,1,NumADBldNds)))
                 if bld_airfoil_filenames[ispan]=="nothing" && span_slices<=span_numad
                     bld_airfoil_filenames[ispan] = "$(numadIn_bld.airfoil[ispan_numad]).dat"
                 end
             end
         end
         
-        if meshtype == "ARCUS" 
+        # Set up blade and airfoil filenames
             blade_filenames = ["$path/blade$i.dat" for i=1:Nbld]
             blade_chords = [bldchord_spl for i=1:Nbld]
             blade_Nnodes = [NumADBldNds for i=1:Nbld]
-            airfoil_filenames = [bld_airfoil_filenames for i=1:Nbld]
             
+        if aero_config.meshtype == "ARCUS"
+            airfoil_filenames = [bld_airfoil_filenames for i=1:Nbld]
         else
-            blade_filenames = ["$path/blade$i.dat" for i=1:Nbld]
-            blade_chords = [bldchord_spl for i=1:Nbld]
-            blade_Nnodes = [NumADBldNds for i=1:Nbld]
             airfoil_filenames = collect(Iterators.flatten([bld_airfoil_filenames for i=1:Nbld]))
             
+            # Process strut geometry
             for istrut = 1:Nstrutperbld
-                strutchord_spl = safeakima(numadIn_strut[istrut].span./maximum(numadIn_strut[istrut].span), numadIn_strut[istrut].chord,LinRange(0,1,NumADStrutNds))
+                strutchord_spl = safeakima(numadIn_strut[istrut].span./maximum(numadIn_strut[istrut].span),
+                                         numadIn_strut[istrut].chord, LinRange(0,1,NumADStrutNds))
+                
                 for ibld = 1:Nbld
-                    blade_filenames = [blade_filenames;"$path/strut$(istrut)_bld$ibld.dat"]
-                    blade_chords = [blade_chords;[strutchord_spl]]
-                    blade_Nnodes = [blade_Nnodes;NumADStrutNds]
+                    blade_filenames = [blade_filenames; "$path/strut$(istrut)_bld$ibld.dat"]
+                    blade_chords = [blade_chords; [strutchord_spl]]
+                    blade_Nnodes = [blade_Nnodes; NumADStrutNds]
 
-                    # Discretely assign the strut airfoils based on the next closest neighbor
-                    strut_airfoil_filenames = fill("nothing",NumADStrutNds)
-                    for (ispan_numad,span_numad) in enumerate(numadIn_strut[istrut].span./maximum(numadIn_strut[istrut].span))
-                        for (ispan,span_slices) in enumerate(collect(LinRange(0,1,NumADBldNds)))
+                    # Assign strut airfoils
+                    strut_airfoil_filenames = fill("nothing", NumADStrutNds)
+                    for (ispan_numad, span_numad) in enumerate(numadIn_strut[istrut].span./maximum(numadIn_strut[istrut].span))
+                        for (ispan, span_slices) in enumerate(collect(LinRange(0,1,NumADBldNds)))
                             if strut_airfoil_filenames[ispan]=="nothing" && span_slices<=span_numad
                                 strut_airfoil_filenames[ispan] = "$(numadIn_strut[istrut].airfoil[ispan_numad]).dat"
                             end
                         end
                     end
-
                     airfoil_filenames = [airfoil_filenames; strut_airfoil_filenames]
-
                 end
             end
         end
 
-        OWENSOpenFASTWrappers.writeADinputFile(ad_input_file,blade_filenames,airfoil_filenames,OLAF_filename;rho)
+        # Write AeroDyn input files
+        OWENS.writeADinputFile(ad_input_file, blade_filenames, airfoil_filenames, OLAF_filename;
+                              rho=aero_config.rho)
 
         NumADBody = length(AD15bldNdIdxRng[:,1])
         bld_len = zeros(NumADBody)
@@ -622,10 +737,11 @@ function setupOWENS(OWENSAero,path;
 
                 BlAFID=collect((iADBody-1)*NumADBldNds+1:iADBody*NumADBldNds)
 
-            elseif iADBody>Nbld # while the arms/struts are assumed to be straight and are oriented by the mesh angle
+            else # while the arms/struts are assumed to be straight and are oriented by the mesh angle
                 BlSpn=collect(LinRange(0,bld_len[iADBody],blade_Nnodes[iADBody]))
                 BlCrvAC=zeros(blade_Nnodes[iADBody])
                 BlSwpAC=zeros(blade_Nnodes[iADBody])
+
                 BlCrvAng=zeros(blade_Nnodes[iADBody])
                 BlTwist=zeros(blade_Nnodes[iADBody])
                 BlChord=blade_chords[iADBody]
@@ -657,18 +773,262 @@ function setupOWENS(OWENSAero,path;
 
         aeroForcesAD(t,azi) = OWENS.mapAD15(t,azi,[mymesh],OWENSOpenFASTWrappers.advanceAD15;alwaysrecalc=true,verbosity)
         deformAeroAD=OWENSOpenFASTWrappers.deformAD15
+    return AerodynamicModelOutputs(
+            aeroForces = aeroForcesAD,
+            deformAero = deformAeroAD,
+            ad_input_file = ad_input_file,
+            ifw_input_file = ifw_input_file,
+            blade_filenames = blade_filenames,
+            blade_chords = blade_chords,
+            blade_Nnodes = blade_Nnodes,
+            airfoil_filenames = airfoil_filenames
+        )
+    end
+    else
+        #########################################
+        ### Set up aero forces
+        #########################################
+        #### translate from blade span to blade height between the numad definition and the vertical slice positions
+        #### First get the angles from the overall geometry npoints and go to the numad npoints
+        delta_xs = shapeX[2:end] - shapeX[1:end-1]
+        delta_zs = shapeZ[2:end] - shapeZ[1:end-1]
+        delta3D = atan.(delta_xs./delta_zs)
+        delta3D_spl = safeakima(shapeZ[1:end-1]./maximum(shapeZ[1:end-1]), delta3D,LinRange(0,1,length(numadIn_bld.span)-1))
+        #### now convert the numad span to a height
+        bld_height_numad = numadIn_bld.span/maximum(numadIn_bld.span)
+        bld_height_numad_unit = [bld_height_numad[i]+(bld_height_numad[i+1]-bld_height_numad[i])/2 for i = 1:length(bld_height_numad)-1].*(1.0.-abs.(sin.(delta3D_spl)))
+        # bld_height_numad_unit = cumsum(diff((bld_height_numad[2:end]+bld_height_numad[1:end-1])/2).*(1.0.-abs.(sin.(delta3D_spl[1:end-1]))))
+
+        #### now we can use it to access the numad data 
+        chord = safeakima(bld_height_numad_unit, numadIn_bld.chord,LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices))
+        airfoils = fill("nothing",Nslices)
+
+        twist = safeakima(bld_height_numad_unit, numadIn_bld.twist_d.*pi/180,LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices))
+
+        # Discretely assign the airfoils
+        for (iheight_numad,height_numad) in enumerate(bld_height_numad_unit)
+            for (iheight,height_slices) in enumerate(collect(LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices)))
+                if airfoils[iheight]=="nothing" && height_slices<=height_numad
+                    airfoils[iheight] = "$(numadIn_bld.airfoil[iheight_numad]).dat"
+                end
+            end
+        end
+        
+        # Map the element wise mass to the input aero shape
+        rhoA_el = [mass_bld[i][1,1] for i = 1:length(mass_bld)]
+        if AD15bldNdIdxRng[1,2]<AD15bldNdIdxRng[1,1]
+            bld_z_node = mymesh.z[AD15bldNdIdxRng[1,2]:AD15bldNdIdxRng[1,1]]
+        else
+            bld_z_node = mymesh.z[AD15bldNdIdxRng[1,1]:AD15bldNdIdxRng[1,2]]
+        end
+        bld_z_el = bld_z_node[1:end-1] .+ (bld_z_node[2:end].-bld_z_node[1:end-1])./2
+        rhoA_in = FLOWMath.akima(bld_z_el,rhoA_el,shapeZ)
+
+        OWENSAero.setupTurb(shapeX,shapeZ,B,chord,tsr,Vinf;AeroModel,DynamicStallModel,
+        afname = airfoils,
+        bld_y = shapeY,
+        rho,
+        twist, #TODO: verify twist is in same direction
+        mu,
+        eta,
+        ifw, #TODO: propogate WindType
+        turbsim_filename = windINPfilename,
+        ifw_libfile,
+        tau = [1e-5,1e-5],
+        Aero_AddedMass_Active,
+        Aero_RotAccel_Active,
+        Aero_Buoyancy_Active,
+        centrifugal_force_flag,
+        ntheta,
+        Nslices,
+        RPI,
+        rhoA_in)
+
+        aeroForcesACDMS(t,azi) = OWENS.mapACDMS(t,azi,mymesh,myel,OWENSAero.AdvanceTurbineInterpolate;alwaysrecalc=true)
+        deformAeroACDMS = OWENSAero.deformTurb
+
+        return AerodynamicModelOutputs(
+            aeroForces = aeroForcesACDMS,
+            deformAero = deformAeroACDMS,
+            ad_input_file = nothing,
+            ifw_input_file = nothing,
+            blade_filenames = nothing,
+            blade_chords = nothing,
+            blade_Nnodes = nothing,
+            airfoil_filenames = nothing
+        )
+    end
+end
+
+function create_default_tower_sectional_properties()
+    n_web = 0
+    n_stack = 2
+    n_segments = 2
+    span = [0.0, 6.607421057, 13.21484211, 19.82226317, 26.42968423, 33.03710529, 
+            39.64452634, 46.2519474, 52.85936846, 59.46678951, 66.07421057, 
+            72.68163163, 79.28905268, 85.89647374, 92.5038948, 99.11131586, 
+            105.7187369, 112.326158, 118.933579, 125.5410001, 132.1484211]
+    airfoil = fill("circular", length(span))
+    te_type = fill("round", length(span))
+    twist_d = zeros(length(span))
+    chord = vcat(fill(10.0, 18), fill(0.25, 3))
+    xoffset = fill(0.5, length(span))
+    aerocenter = fill(0.25, length(span))
+    stack_mat_types = [8, 2]
+    stack_layers = [70 3; 70 3; 70 3; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03]
+    segments = repeat([-1.0 0.0 1.0], length(span))
+    DPtypes = fill("", length(span), 3)
+    skin_seq = fill(Seq([2, 1, 2]), length(span), 2)
+    web_seq = Array{Seq, 2}(undef, length(span), 0)
+    web_dp = Array{Seq, 2}(undef, length(span), 0)
+
+    return NuMad(n_web, n_stack, n_segments, span, airfoil, te_type, twist_d,
+                chord, xoffset, aerocenter, stack_mat_types, stack_layers,
+                segments, DPtypes, skin_seq, web_seq, web_dp)
+end
+
+function create_default_blade_sectional_properties()
+    n_web = 0
+    n_stack = 2
+    n_segments = 2
+    span = collect(LinRange(0, 5.0, 31))
+    airfoil = fill("circular", length(span))
+    te_type = fill("round", length(span))
+    twist_d = zeros(length(span))
+    chord = 2.5 .* (1.0 .- 4.0 .* (span/5.0 .- 0.5).^2)
+    xoffset = fill(0.5, length(span))
+    aerocenter = fill(0.25, length(span))
+    stack_mat_types = [8, 2]
+    stack_layers = [70 3; 70 3; 70 3; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 
+                    30.303 3.03; 30.303 3.03; 30.303 3.03]
+    segments = repeat([-1.0 0.0 1.0], length(span))
+    DPtypes = fill("", length(span), 3)
+    skin_seq = fill(Seq([2, 1, 2]), length(span), 2)
+    web_seq = Array{Seq, 2}(undef, length(span), 0)
+    web_dp = Array{Seq, 2}(undef, length(span), 0)
+
+    return NuMad(n_web, n_stack, n_segments, span, airfoil, te_type, twist_d,
+                chord, xoffset, aerocenter, stack_mat_types, stack_layers,
+                segments, DPtypes, skin_seq, web_seq, web_dp)
+end
+
+function create_default_material_properites()
+    # Define material names and properties
+    names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", 
+             "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
+    
+    plies = [
+        # CLA_5500
+        Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 
+            8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066),
+        # CBX_2400
+        Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 
+            4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.00081),
+        # ETLX_2400
+        Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 
+            5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066),
+        # Airex_C70_55
+        Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 
+            1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001),
+        # EBX_2400_x10
+        Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 
+            4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.0e-5),
+        # ETLX_2400_x10
+        Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 
+            5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5),
+        # Airex_C70_55_x10
+        Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 
+            1.0e9, 1.0e9, 1.0e8, 1.0e8, 1.0e8, 7.0e-5),
+        # CFP-baseline
+        Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 
+            2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)
+    ]
+    
+    # Create ply properties
+    return OWENS.plyproperties(names, plies)
+end
+
+
+
+# Main setup function
+function setupOWENS(OWENSAero::Module, path::String;
+    mesh_config = default_mesh_config(),
+    tower_config = default_tower_config(),
+    blade_config = default_blade_config(),
+    material_config = default_material_config(),
+    aero_config = default_aero_config()
+    )
+    #### from old setupOWENS
+    # custom_mesh_outputs = []
+
+    if AeroModel=="AD"
+        AD15On = true
+    else
+        AD15On = false
     end
 
+    if minimum(shapeZ)!=0
+        @error "blade shapeZ must start at 0.0"
+    end
+
+    if AddedMass_Coeff_Ca>0.0
+        centrifugal_force_flag = true
+    else
+        centrifugal_force_flag = false
+    end
+
+    # Here is where we take the inputs from setupOWENS and break out what is going on behind the function.
+    # We do some intermediate calculations on the blade shape and angles
+
+    Nstrutperbld = length(strut_twr_mountpoint)
+
+    Nbld = B
+    H = maximum(shapeZ) #m,
+    R = maximum(shapeX) #m,
+    omega = RPM / 60 * 2 * pi
+    tsr = omega*R/Vinf
+
     nothing
+
+    
+    ## Setup mesh
+    mesh_outputs = setup_mesh(mesh_config, blade_config, tower_config)
+    
+    nTwrElem = Int(mymesh.meshSeg[1])+1
+
+    ## Setup blade and tower
+    blade_props = setup_blade(blade_config, material_config, path)
+    tower_props = setup_tower(tower_config, material_config)
+
+    ## Setup struts
+    strut_props = setup_struts(blade_config, tower_config, material_config)
+
+    ## Process sectional properties
+    sectional_props = process_sectional_properties(
+        mesh_config, blade_config, tower_config,
+        mesh_outputs, blade_props, tower_props, strut_props
+    )
+
+    ## Setup aerodynamic model
+    aero_props = setup_aerodynamic_model(aero_config, blade_config, tower_config, 
+        blade_props.numadIn_bld, strut_props.numadIn_strut, 
+        path, mesh_config, mesh_outputs.mymesh, 
+        mesh_outputs.AD15bldNdIdxRng, tower_config.angularOffset)
+
+
 
     # Calculate mass breakout of each material
     mass_breakout_bld = OWENS.get_material_mass(plyprops_bld,numadIn_bld)
     mass_breakout_blds = mass_breakout_bld.*B
     mass_breakout_twr = OWENS.get_material_mass(plyprops_twr,numadIn_twr)
 
-
-    # If the sectional properties material files includes cost information, that is combined with the density 
-    # to estimate the overall material cost of of materials in the blades
 
     if verbosity>0
         
@@ -695,20 +1055,726 @@ function setupOWENS(OWENSAero,path;
         
     end
 
-    if AD15On
-        return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
-        stiff_twr, stiff_bld,bld_precompinput,
-        bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
-        twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForcesAD,deformAeroAD,
-        mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs,stiff_array,mass_array
-    else
-        return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
-        stiff_twr, stiff_bld,bld_precompinput,
-        bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
-        twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForcesACDMS,deformAeroACDMS,
-        mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs,stiff_array,mass_array
-    end
+    return (
+        mesh_outputs,          # MeshOutputs
+        blade_props,           # BladeProperties
+        tower_props,           # TowerProperties
+        aero_outputs,          # AerodynamicModelOutputs
+        strut_props,           # StrutProperties
+        omega,                 # Float64
+        tsr                    # Float64
+    )
 end
+
+
+# function setupOWENS_old(OWENSAero,path;
+#     rho = 1.225,
+#     mu = 1.7894e-5,
+#     Nslices = 30,
+#     ntheta = 30,
+#     RPM = 1e-6,
+#     Vinf = 25.0,
+#     eta = 0.5,
+#     B = 3,
+#     H = 5.0,
+#     R = 2.5,
+#     shapeZ = collect(LinRange(0,H,Nslices+1)),
+#     shapeX = R.*(1.0.-4.0.*(shapeZ/H.-.5).^2),#shapeX_spline(shapeZ)
+#     ntelem = 10, #tower elements
+#     nbelem = 60, #blade elements
+#     ncelem = 10,
+#     nselem = 5,
+#     shapeY = zeros(Nslices+1),
+#     ifw=false,
+#     AD15hubR = 0.1,
+#     WindType=1,
+#     delta_t = 0.01,
+#     numTS = 100,
+#     adi_lib = "$(path)../../../../openfast/build/modules/aerodyn/libaerodyn_inflow_c_binding",
+#     adi_rootname = "./Example",
+#     windINPfilename="$(path)/data/turbsim/115mx115m_30x30_25.0msETM.bts",
+#     ifw_libfile = nothing,
+#     NuMad_geom_xlscsv_file_twr = nothing,
+#     NuMad_mat_xlscsv_file_twr = nothing,
+#     NuMad_geom_xlscsv_file_bld = nothing,
+#     NuMad_mat_xlscsv_file_bld = nothing,
+#     NuMad_geom_xlscsv_file_strut = nothing,
+#     NuMad_mat_xlscsv_file_strut = nothing,
+#     stack_layers_bld = nothing,
+#     stack_layers_scale = [1.0,1.0],
+#     chord_scale = [1.0,1.0],
+#     thickness_scale = [1.0,1.0],
+#     Htwr_base = 2.0,
+#     Htwr_blds = H,
+#     strut_twr_mountpoint = [0.25,0.75],
+#     strut_bld_mountpoint = [0.25,0.75],
+#     joint_type = 2,
+#     c_mount_ratio = 0.05,
+#     angularOffset = -pi/2,
+#     AeroModel="DMS",
+#     DynamicStallModel="BV",
+#     RPI=true,
+#     Aero_AddedMass_Active = false,
+#     Aero_RotAccel_Active = false,
+#     Aero_Buoyancy_Active = false,
+#     cables_connected_to_blade_base = true,
+#     meshtype = "Darrieus",
+#     custommesh = nothing,
+#     AddedMass_Coeff_Ca = 0.0,
+#     verbosity=0,
+#     VTKmeshfilename = nothing) #Darrieus, H-VAWT, ARCUS
+    
+#     custom_mesh_outputs = []
+
+#     if AeroModel=="AD"
+#         AD15On = true
+#     else
+#         AD15On = false
+#     end
+
+#     if minimum(shapeZ)!=0
+#         @error "blade shapeZ must start at 0.0"
+#     end
+
+#     if AddedMass_Coeff_Ca>0.0
+#         centrifugal_force_flag = true
+#     else
+#         centrifugal_force_flag = false
+#     end
+
+#     # Here is where we take the inputs from setupOWENS and break out what is going on behind the function.
+#     # We do some intermediate calculations on the blade shape and angles
+
+#     Nstrutperbld = length(strut_twr_mountpoint)
+
+#     Nbld = B
+#     H = maximum(shapeZ) #m,
+#     R = maximum(shapeX) #m,
+#     omega = RPM / 60 * 2 * pi
+#     tsr = omega*R/Vinf
+    
+#     nothing
+    
+#     # Here we set up the mesh using one of the pre-made meshing functions.  For this case, there is a function for the ARCUS, as 
+#     # well as for towered VAWTs where you can have an arbitrary blade shape with connected struts, and if the blade tips touch
+#     # the tower, then you can tell it to constrain them to the tower thus allowing for both H-VAWT and Darrieus designs.
+    
+#     #########################################
+#     ### Set up mesh
+#     #########################################
+#     if meshtype == "ARCUS" && custommesh == nothing #TODO, for all of these propogate the AeroDyn additional output requirements
+#         mymesh,myort,myjoint, AD15bldNdIdxRng, AD15bldElIdxRng = OWENS.create_arcus_mesh(;Htwr_base,
+#             Hbld = H, #blade height
+#             R, # m bade radius
+#             nblade = Nbld,
+#             ntelem, #tower elements
+#             nbelem, #blade elements
+#             ncelem,
+#             c_mount_ratio,
+#             bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
+#             bshapez = shapeZ,
+#             AD15_ccw = true,
+#             joint_type, #hinged about y axis
+#             cables_connected_to_blade_base,
+#             angularOffset) #Blade shape, magnitude is irrelevant, scaled based on height and radius above
+#     elseif (meshtype == "Darrieus" || meshtype == "H-VAWT") && custommesh == nothing
+        
+#         if meshtype == "Darrieus"
+#             connectBldTips2Twr = true
+#         else
+#             connectBldTips2Twr = false
+#         end
+    
+#         mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng = OWENS.create_mesh_struts(;Htwr_base,
+#             Htwr_blds,
+#             Hbld = H, #blade height
+#             R, # m bade radius
+#             AD15hubR, #TODO: hook up with AD15 file generation
+#             nblade = Nbld,
+#             ntelem, #tower elements
+#             nbelem, #blade elements
+#             nselem,
+#             strut_twr_mountpoint,
+#             strut_bld_mountpoint,
+#             bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
+#             bshapez = shapeZ,
+#             bshapey = shapeY, # but magnitude for this is relevant
+#             angularOffset, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
+#             AD15_ccw = true,
+#             verbosity, # 0 nothing, 1 basic, 2 lots: amount of printed information
+#             connectBldTips2Twr)
+#     elseif custommesh != nothing
+#         mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs = custommesh(;Htwr_base,
+#         Htwr_blds,
+#         Hbld = H, #blade height
+#         R, # m bade radius
+#         AD15hubR, #TODO: hook up with AD15 file generation
+#         nblade = Nbld,
+#         ntelem, #tower elements
+#         nbelem, #blade elements
+#         nselem,
+#         strut_twr_mountpoint,
+#         strut_bld_mountpoint,
+#         bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
+#         bshapez = shapeZ,
+#         bshapey = shapeY, # but magnitude for this is relevant
+#         angularOffset, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
+#         AD15_ccw = true,
+#         verbosity, # 0 nothing, 1 basic, 2 lots: amount of printed information)
+#         )
+#     else #TODO unify with HAWT
+#         error("please choose a valid mesh type (Darrieus, H-VAWT, ARCUS)")
+#     end
+
+#     nTwrElem = Int(mymesh.meshSeg[1])+1
+    
+#     nothing
+
+#     # Here is a way that you can visualize the nodal numbers of the mesh
+
+#     # PyPlot.figure()
+#     # PyPlot.plot(mymesh.x,mymesh.z,"b-")
+#     # for myi = 1:length(mymesh.x)
+#     #     PyPlot.text(mymesh.x[myi].+rand()/30,mymesh.z[myi].+rand()/30,"$myi",ha="center",va="center")
+#     #     PyPlot.draw()
+#     #     #sleep(0.1)
+#     # end
+#     # PyPlot.xlabel("x")
+#     # PyPlot.ylabel("y")
+
+#     # This is where the sectional properties for the tower are either read in from the file, or are directly input and could be manuplated here in the script
+
+#     #########################################
+#     ### Set up Sectional Properties
+#     #########################################
+
+#     if !isnothing(NuMad_geom_xlscsv_file_twr)
+#         numadIn_twr = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_twr;section=:tower)
+#     else
+#         n_web = 0
+#         n_stack = 2
+#         n_segments = 2
+#         span = [0.0, 6.607421057, 13.21484211, 19.82226317, 26.42968423, 33.03710529, 39.64452634, 46.2519474, 52.85936846, 59.46678951, 66.07421057, 72.68163163, 79.28905268, 85.89647374, 92.5038948, 99.11131586, 105.7187369, 112.326158, 118.933579, 125.5410001, 132.1484211]
+#         airfoil = ["circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular", "circular"]
+#         te_type = ["round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round", "round"]
+#         twist_d = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#         chord = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.25, 0.25, 0.25]
+#         xoffset = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+#         aerocenter = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+#         stack_mat_types = [8, 2]
+#         stack_layers = [70 3; 70 3; 70 3; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03; 30.303 3.03]
+#         segments = [-1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0; -1.0 0.0 1.0]
+#         DPtypes = ["" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""; "" "" ""]
+#         skin_seq = [Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2]); Seq([2, 1, 2]) Seq([2, 1, 2])]
+#         web_seq = Array{Seq, 2}(undef, length(twist_d),0) #can be any number of stack nums, so we have to make non-square containers
+#         web_dp = Array{Seq, 2}(undef, length(twist_d),0) #this is fixed size square, but it's easier to do it this way
+
+#         numadIn_twr = NuMad(n_web,n_stack,n_segments,span,airfoil,te_type,twist_d,chord,xoffset,aerocenter,stack_mat_types,stack_layers,segments,DPtypes,skin_seq,web_seq,web_dp)
+#     end
+
+#     #### Add the full path
+#     for (i,airfoil) in enumerate(numadIn_twr.airfoil)
+#         numadIn_twr.airfoil[i] = "$path/airfoils/$airfoil"
+#     end
+
+#     nothing
+
+#     # Here is where the material properties for the tower are either read in from the file, or directly input
+
+#     if !isnothing(NuMad_mat_xlscsv_file_twr)
+#         plyprops_twr = OWENS.readNuMadMaterialsCSV(NuMad_mat_xlscsv_file_twr)
+#     else
+#         names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
+#         plies = [Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.0008100000000000001), Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001), Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5), Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 1.0e9, 1.0e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)]
+#         plyprops_twr = OWENS.plyproperties(names,plies)
+#     end
+
+#     # Then this is where precomp.jl is called to get first the precomp outputs, then formatting those into the OWENS format, and then in the GXBeam.jl format for if GXBeam is used as the structural solver.
+
+#     twr_precompoutput,twr_precompinput,lam_U_twr,lam_L_twr,lam_W_twr = OWENS.getOWENSPreCompOutput(numadIn_twr;plyprops = plyprops_twr)
+#     sectionPropsArray_twr = OWENS.getSectPropsFromOWENSPreComp(LinRange(0,1,nTwrElem),numadIn_twr,twr_precompoutput;precompinputs=twr_precompinput,fluid_density=rho,AddedMass_Coeff_Ca)
+#     stiff_twr, mass_twr = OWENS.getSectPropsFromOWENSPreComp(LinRange(0,1,nTwrElem),numadIn_twr,twr_precompoutput;precompinputs=twr_precompinput,GX=true,fluid_density=rho,AddedMass_Coeff_Ca)
+
+#     nothing
+
+#     # For the blades, we repeat what was done for the tower, but also include some simple design options for scaling thicknesses,
+#     if !isnothing(NuMad_geom_xlscsv_file_bld)
+#         numadIn_bld = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_bld;section=:blade)
+#     else
+#         n_web = 1
+#         n_stack = 7
+#         n_segments = 12
+#         span = [0.0, 6.607, 13.215, 19.822, 26.43, 33.037, 39.645, 46.252, 52.859, 59.467, 66.074, 72.682, 79.289, 85.896, 92.504, 99.111, 105.719, 112.326, 118.934, 125.541, 132.148]
+#         airfoil = ["circular", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021"]
+#         te_type = ["round", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp"]
+#         twist_d = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#         chord = [10.0, 10.0, 9.0, 8.0, 8.0, 7.0, 7.0, 6.0, 6.0, 6.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
+#         xoffset = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+#         aerocenter = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+#         stack_mat_types = [8, 2, 4, 8, 8, 8, 4]
+#         if isnothing(stack_layers_bld)
+#             stack_layers = [30.0 2.0 15.0 25.0 25.0 2.0 13.0; 15.0 2.0 10.0 13.0 11.0 2.0 11.0; 10.0 1.0 8.0 10.0 10.0 2.0 10.0; 8.0 1.0 6.0 9.0 10.0 1.0 9.0; 7.0 1.0 5.0 8.0 9.0 1.0 7.0; 6.0 1.0 4.0 8.0 9.0 1.0 6.0; 6.0 1.0 4.0 8.0 8.0 1.0 5.0; 6.0 1.0 4.0 7.0 7.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 7.0 8.0 3.0 5.0; 7.0 2.0 3.0 9.0 12.0 3.0 6.0; 10.0 3.0 4.0 11.0 15.0 3.0 6.0; 12.0 3.0 4.0 13.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 10.0 1.0 4.0 10.0 12.0 1.0 5.0]
+#         else
+#             stack_layers = stack_layers_bld
+#         end
+#         segments = [-1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0]
+#         DPtypes = ["" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""]
+#         skin_seq = [Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2])]
+#         web_seq = [Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]);;]
+#         web_dp = [Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]);;]
+
+#         numadIn_bld = NuMad(n_web,n_stack,n_segments,span,airfoil,te_type,twist_d,chord,xoffset,aerocenter,stack_mat_types,stack_layers,segments,DPtypes,skin_seq,web_seq,web_dp)
+#     end
+#     for icol = 1:length(numadIn_bld.stack_layers[1,:])
+#         numadIn_bld.stack_layers[:,icol] .*= LinRange(stack_layers_scale[1],stack_layers_scale[2],length(numadIn_bld.chord))
+#     end
+#     numadIn_bld.chord .*= LinRange(chord_scale[1],chord_scale[2],length(numadIn_bld.chord))
+
+#     for (i,airfoil) in enumerate(numadIn_bld.airfoil)
+#         numadIn_bld.airfoil[i] = "$path/airfoils/$airfoil"
+#     end
+
+#     if !isnothing(NuMad_mat_xlscsv_file_bld)
+#         plyprops_bld = OWENS.readNuMadMaterialsCSV(NuMad_mat_xlscsv_file_bld)
+#     else
+#         names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
+#         plies = [Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.0008100000000000001), Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001), Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5), Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)]
+#         plyprops_bld = OWENS.plyproperties(names,plies)
+#     end
+
+#     bld1start = Int(mymesh.structuralNodeNumbers[1,1]) #Get blade spanwise position
+#     bld1end = Int(mymesh.structuralNodeNumbers[1,end])
+#     spanpos = [0.0;cumsum(sqrt.(diff(mymesh.x[bld1start:bld1end]).^2 .+ diff(mymesh.y[bld1start:bld1end]).^2 .+ diff(mymesh.z[bld1start:bld1end]).^2))]
+
+#     if length(thickness_scale)==2
+#         yscale = collect(LinRange(thickness_scale[1],thickness_scale[2],length(numadIn_bld.span)))
+#     elseif length(thickness_scale)==length(numadIn_bld.span)
+#         yscale = thickness_scale
+#     end
+
+#     bld_precompoutput,bld_precompinput,lam_U_bld,lam_L_bld,lam_W_bld = OWENS.getOWENSPreCompOutput(numadIn_bld;yscale,plyprops = plyprops_bld)
+#     sectionPropsArray_bld = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_bld,bld_precompoutput;precompinputs=bld_precompinput,fluid_density=rho,AddedMass_Coeff_Ca)
+#     stiff_bld, mass_bld = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_bld,bld_precompoutput;precompinputs=bld_precompinput,GX=true,fluid_density=rho,AddedMass_Coeff_Ca)
+
+#     nothing
+
+#     # Similarly for the struts, we do what was done for the blades
+#     numadIn_strut = Array{NuMad, 1}(undef, Nstrutperbld)
+#     strut_precompoutput = Array{Array{OWENSPreComp.Output, 1},1}(undef, Nstrutperbld)
+#     strut_precompinput = Array{Array{OWENSPreComp.Input, 1},1}(undef, Nstrutperbld)
+#     lam_U_strut = Array{Array{Composites.Laminate, 2}}(undef, Nstrutperbld)
+#     lam_L_strut = Array{Array{Composites.Laminate, 2}}(undef, Nstrutperbld)
+#     lam_W_strut = Array{Array{Composites.Laminate, 2}}(undef, Nstrutperbld)
+#     sectionPropsArray_strut = Array{Array{OWENSFEA.SectionPropsArray, 1}}(undef, Nstrutperbld)
+#     stiff_strut = Array{Array{Array{Float64,2}, 1},1}(undef, Nstrutperbld)
+#     mass_strut = Array{Array{Array{Float64,2}, 1},1}(undef, Nstrutperbld)
+#     mass_breakout_struts = []
+#     plyprops_strut = []
+#     coststruts = 0
+#     for istrut = 1:Nstrutperbld
+#         if !isnothing(NuMad_geom_xlscsv_file_strut)
+#             if typeof(NuMad_geom_xlscsv_file_strut)==String
+#                 numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut)
+#             elseif typeof(NuMad_geom_xlscsv_file_strut) == OrderedCollections.OrderedDict{Symbol, Any}
+#                 if length(NuMad_geom_xlscsv_file_strut[:components][:struts])==1
+#                     numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut;section=:struts,subsection=1)
+#                 else
+#                     numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut;section=:struts,subsection=istrut)
+#                 end
+#             else
+#                 numadIn_strut[istrut] = OWENS.readNuMadGeomCSV(NuMad_geom_xlscsv_file_strut[istrut])
+#             end
+#         else
+#             n_web = 1
+#             n_stack = 7
+#             n_segments = 12
+#             span = [0.0, 6.607, 13.215, 19.822, 26.43, 33.037, 39.645, 46.252, 52.859, 59.467, 66.074, 72.682, 79.289, 85.896, 92.504, 99.111, 105.719, 112.326, 118.934, 125.541, 132.148]
+#             airfoil = ["circular", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021", "NACA_0021"]
+#             te_type = ["round", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp", "sharp"]
+#             twist_d = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+#             chord = [10.0, 10.0, 9.0, 8.0, 8.0, 7.0, 7.0, 6.0, 6.0, 6.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
+#             xoffset = [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+#             aerocenter = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+#             stack_mat_types = [8, 2, 4, 8, 8, 8, 4]
+#             if isnothing(stack_layers_strut)
+#                 stack_layers = [30.0 2.0 15.0 25.0 25.0 2.0 13.0; 15.0 2.0 10.0 13.0 11.0 2.0 11.0; 10.0 1.0 8.0 10.0 10.0 2.0 10.0; 8.0 1.0 6.0 9.0 10.0 1.0 9.0; 7.0 1.0 5.0 8.0 9.0 1.0 7.0; 6.0 1.0 4.0 8.0 9.0 1.0 6.0; 6.0 1.0 4.0 8.0 8.0 1.0 5.0; 6.0 1.0 4.0 7.0 7.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 8.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 1.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 6.0 6.0 2.0 5.0; 7.0 1.0 3.0 7.0 8.0 3.0 5.0; 7.0 2.0 3.0 9.0 12.0 3.0 6.0; 10.0 3.0 4.0 11.0 15.0 3.0 6.0; 12.0 3.0 4.0 13.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 12.0 3.0 4.0 15.0 15.0 3.0 6.0; 10.0 1.0 4.0 10.0 12.0 1.0 5.0]
+#             else
+#                 stack_layers = stack_layers_strut
+#             end
+#             segments = [-1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0; -1.0 -0.95 -0.5 -0.3 -0.1 -0.095 0.0 0.095 0.1 0.3 0.5 0.95 1.0]
+#             DPtypes = ["" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""; "" "" "" "" "" "" "" "" "" "" "" "" ""]
+#             skin_seq = [Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2]); Seq([2, 5, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 1, 2]) Seq([2, 1, 2]) Seq([2, 3, 2]) Seq([2, 4, 2]) Seq([2, 4, 2]) Seq([2, 3, 2]) Seq([2, 5, 2])]
+#             web_seq = [Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]); Seq([6, 7, 6]);;]
+#             web_dp = [Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]); Seq([9, 3, 3, 9]);;]
+
+#             numadIn_strut[istrut] = NuMad(n_web,n_stack,n_segments,span,airfoil,te_type,twist_d,chord,xoffset,aerocenter,stack_mat_types,stack_layers,segments,DPtypes,skin_seq,web_seq,web_dp)
+#         end
+#         for icol = 1:length(numadIn_strut[istrut].stack_layers[1,:])
+#             numadIn_strut[istrut].stack_layers[:,icol] .*= LinRange(stack_layers_scale[1],stack_layers_scale[2],length(numadIn_strut[istrut].chord))
+#         end
+#         # numadIn_strut[istrut].chord .*= LinRange(chord_scale[1],chord_scale[2],length(numadIn_strut[istrut].chord))
+
+#         for (i,airfoil) in enumerate(numadIn_strut[istrut].airfoil)
+#             numadIn_strut[istrut].airfoil[i] = "$path/airfoils/$airfoil"
+#         end
+
+#         if !isnothing(NuMad_mat_xlscsv_file_strut)
+#             plyprops_strut = OWENS.readNuMadMaterialsCSV(NuMad_mat_xlscsv_file_strut)
+#         else
+#             names = ["CLA_5500", "CBX_2400", "ETLX_2400", "Airex_C70_55", "EBX_2400_x10", "ETLX_2400_x10", "Airex_C70_55_x10", "CFP-baseline"]
+#             plies = [Composites.Material{Float64}(9.824e10, 5.102e9, 4.274e9, 0.3, 1540.0, 8.75634139e8, 5.92949102e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(1.4931e10, 1.4931e10, 2.389e10, 0.3, 1530.0, 4.55053962e8, 4.55053962e8, 1.0e8, 1.0e8, 1.0e8, 0.0008100000000000001), Composites.Material{Float64}(2.0333e10, 9.305e9, 4.756e9, 0.3, 1900.0, 5.30896289e8, 5.30896289e8, 1.0e8, 1.0e8, 1.0e8, 0.00066), Composites.Material{Float64}(4.5e7, 4.5e7, 2.2e7, 0.2, 59.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 0.001), Composites.Material{Float64}(9.824e11, 5.102e10, 4.274e10, 0.3, 15300.0, 4.55053962e9, 4.55053962e9, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.4931e11, 1.4931e11, 2.389e11, 0.3, 19000.0, 5.30896289e9, 5.30896289e9, 1.0e8, 1.0e8, 1.0e8, 8.0e-5), Composites.Material{Float64}(2.03335e11, 9.3051e10, 4.756e10, 0.2, 590.0, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 1.0e8, 7.000000000000001e-5), Composites.Material{Float64}(1.576e11, 9.1e9, 3.3e9, 0.263, 1600.0, 2.236e9, 1.528e9, 1.0e8, 1.0e8, 1.0e8, 0.00066)]
+#             plyprops_strut = OWENS.plyproperties(names,plies)
+#         end
+
+#         if istrut == 1
+#             mass_breakout_struts = OWENS.get_material_mass(plyprops_strut,numadIn_strut[istrut]).*B
+#             coststruts = sum(mass_breakout_struts.*plyprops_strut.costs)
+#         else
+#             temp_mass_breakout_struts = OWENS.get_material_mass(plyprops_strut,numadIn_strut[istrut]).*B
+#             mass_breakout_struts .+= temp_mass_breakout_struts
+#             coststruts += sum(temp_mass_breakout_struts.*plyprops_strut.costs)
+#         end
+
+#         #TODO: not straight struts
+#         spanpos = LinRange(0,1,nselem+1)#[0.0;cumsum(sqrt.(diff(mymesh.x[strut1start:strut1end]).^2 .+ diff(mymesh.z[strut1start:strut1end]).^2))]
+
+#         if length(thickness_scale)==2
+#             yscale = collect(LinRange(thickness_scale[1],thickness_scale[2],length(numadIn_strut[istrut].span)))
+#         elseif length(thickness_scale)==length(numadIn_strut[istrut].span)
+#             yscale = thickness_scale
+#         end
+
+#         strut_precompoutput[istrut],strut_precompinput[istrut],lam_U_strut[istrut],lam_L_strut[istrut],lam_W_strut[istrut] = OWENS.getOWENSPreCompOutput(numadIn_strut[istrut];yscale,plyprops = plyprops_strut)
+#         sectionPropsArray_strut[istrut] = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_strut[istrut],strut_precompoutput[istrut];precompinputs=strut_precompinput[istrut],fluid_density=rho,AddedMass_Coeff_Ca)
+#         stiff_strut[istrut], mass_strut[istrut] = OWENS.getSectPropsFromOWENSPreComp(spanpos,numadIn_strut[istrut],strut_precompoutput[istrut];precompinputs=strut_precompinput[istrut],GX=true,fluid_density=rho,AddedMass_Coeff_Ca)
+#     end
+
+#     nothing
+
+#     # Here we combine the section properties into an array matching the mesh elements
+#     bldssecprops = collect(Iterators.flatten(fill(sectionPropsArray_bld, Nbld)))
+#     # strutssecprops = collect(Iterators.flatten(fill(sectionPropsArray_strut, Nstrutperbld*Nbld)))
+
+#     if meshtype == "ARCUS"
+#         sectionPropsArray = [sectionPropsArray_twr; bldssecprops]#; strutssecprops]#;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str]
+
+#         stiff_blds = collect(Iterators.flatten(fill(stiff_bld, Nbld)))
+#         stiff_array = [stiff_twr; stiff_blds]#; stiff_struts]
+
+#         mass_blds = collect(Iterators.flatten(fill(mass_bld, Nbld)))
+#         mass_array = [mass_twr; mass_blds]#; mass_struts]
+
+#         for icable = 1:Nbld
+#             sectionPropsArray = [sectionPropsArray; sectionPropsArray_strut[1]]
+#             stiff_array = [stiff_array;stiff_strut[1]]
+#             mass_array = [mass_array;mass_strut[1]]
+#         end
+#     else
+#         sectionPropsArray = [sectionPropsArray_twr; bldssecprops]#; strutssecprops]#;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str;sectionPropsArray_str]
+
+#         stiff_blds = collect(Iterators.flatten(fill(stiff_bld, Nbld)))
+#         stiff_array = [stiff_twr; stiff_blds]#; stiff_struts]
+
+#         mass_blds = collect(Iterators.flatten(fill(mass_bld, Nbld)))
+#         mass_array = [mass_twr; mass_blds]#; mass_struts]
+
+#         for istrut = 1:Nstrutperbld
+#             for ibld = 1:Nbld
+#                 sectionPropsArray = [sectionPropsArray; sectionPropsArray_strut[istrut]]
+#                 stiff_array = [stiff_array;stiff_strut[istrut]]
+#                 mass_array = [mass_array;mass_strut[istrut]]
+#             end
+#         end
+#     end
+#     rotationalEffects = ones(mymesh.numEl) #TODO: non rotating tower, or rotating blades
+
+#     if length(sectionPropsArray)<mymesh.numEl
+#         @warn "There are more mesh elements than sectional properties, applying the last strut's sectional properties to the remaining"
+#         n_diff = mymesh.numEl - length(sectionPropsArray)
+#         sectionPropsArray = [sectionPropsArray; fill(sectionPropsArray_strut[end][2],n_diff)]
+#         stiff_array = [stiff_array;fill(stiff_strut[end][2],n_diff)]
+#         mass_array = [mass_array;fill(mass_strut[end][2],n_diff)]
+#     end
+
+#     #### store data in element object
+#     myel = OWENSFEA.El(sectionPropsArray,myort.Length,myort.Psi_d,myort.Theta_d,myort.Twist_d,rotationalEffects)
+#     system, assembly, sections = OWENS.owens_to_gx(mymesh,myort,myjoint,sectionPropsArray,stiff_array,mass_array;VTKmeshfilename)
+
+#     nothing
+
+#     # Set up the OWENSAero aerodynamics if used
+#     if !AD15On
+#         #########################################
+#         ### Set up aero forces
+#         #########################################
+#         #### translate from blade span to blade height between the numad definition and the vertical slice positions
+#         #### First get the angles from the overall geometry npoints and go to the numad npoints
+#         delta_xs = shapeX[2:end] - shapeX[1:end-1]
+#         delta_zs = shapeZ[2:end] - shapeZ[1:end-1]
+#         delta3D = atan.(delta_xs./delta_zs)
+#         delta3D_spl = safeakima(shapeZ[1:end-1]./maximum(shapeZ[1:end-1]), delta3D,LinRange(0,1,length(numadIn_bld.span)-1))
+#         #### now convert the numad span to a height
+#         bld_height_numad = numadIn_bld.span/maximum(numadIn_bld.span)
+#         bld_height_numad_unit = [bld_height_numad[i]+(bld_height_numad[i+1]-bld_height_numad[i])/2 for i = 1:length(bld_height_numad)-1].*(1.0.-abs.(sin.(delta3D_spl)))
+#         # bld_height_numad_unit = cumsum(diff((bld_height_numad[2:end]+bld_height_numad[1:end-1])/2).*(1.0.-abs.(sin.(delta3D_spl[1:end-1]))))
+
+#         #### now we can use it to access the numad data 
+#         chord = safeakima(bld_height_numad_unit, numadIn_bld.chord,LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices))
+#         airfoils = fill("nothing",Nslices)
+
+#         twist = safeakima(bld_height_numad_unit, numadIn_bld.twist_d.*pi/180,LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices))
+
+#         # Discretely assign the airfoils
+#         for (iheight_numad,height_numad) in enumerate(bld_height_numad_unit)
+#             for (iheight,height_slices) in enumerate(collect(LinRange(bld_height_numad_unit[1],bld_height_numad_unit[end],Nslices)))
+#                 if airfoils[iheight]=="nothing" && height_slices<=height_numad
+#                     airfoils[iheight] = "$(numadIn_bld.airfoil[iheight_numad]).dat"
+#                 end
+#             end
+#         end
+        
+#         # Map the element wise mass to the input aero shape
+#         rhoA_el = [mass_bld[i][1,1] for i = 1:length(mass_bld)]
+#         if AD15bldNdIdxRng[1,2]<AD15bldNdIdxRng[1,1]
+#             bld_z_node = mymesh.z[AD15bldNdIdxRng[1,2]:AD15bldNdIdxRng[1,1]]
+#         else
+#             bld_z_node = mymesh.z[AD15bldNdIdxRng[1,1]:AD15bldNdIdxRng[1,2]]
+#         end
+#         bld_z_el = bld_z_node[1:end-1] .+ (bld_z_node[2:end].-bld_z_node[1:end-1])./2
+#         rhoA_in = FLOWMath.akima(bld_z_el,rhoA_el,shapeZ)
+
+#         OWENSAero.setupTurb(shapeX,shapeZ,B,chord,tsr,Vinf;AeroModel,DynamicStallModel,
+#         afname = airfoils,
+#         bld_y = shapeY,
+#         rho,
+#         twist, #TODO: verify twist is in same direction
+#         mu,
+#         eta,
+#         ifw, #TODO: propogate WindType
+#         turbsim_filename = windINPfilename,
+#         ifw_libfile,
+#         tau = [1e-5,1e-5],
+#         Aero_AddedMass_Active,
+#         Aero_RotAccel_Active,
+#         Aero_Buoyancy_Active,
+#         centrifugal_force_flag,
+#         ntheta,
+#         Nslices,
+#         RPI,
+#         rhoA_in)
+
+#         aeroForcesACDMS(t,azi) = OWENS.mapACDMS(t,azi,mymesh,myel,OWENSAero.AdvanceTurbineInterpolate;alwaysrecalc=true)
+#         deformAeroACDMS = OWENSAero.deformTurb
+#     end
+#     nothing
+
+#     # Set up AeroDyn if used
+#     # Here we create AeroDyn the files, first by specifying the names, then by creating the files, TODO: hook up the direct sectionPropsArray_str
+#     # Then by initializing AeroDyn and grabbing the backend functionality with a function handle
+#     if AD15On
+#         ad_input_file = "$path/ADInputFile_SingleTurbine2.dat"
+#         ifw_input_file = "$path/IW2.dat"
+#         OLAF_filename = "$path/OLAF2.dat"
+
+#         NumADBldNds = NumADStrutNds = 10 
+
+#         bldchord_spl = safeakima(numadIn_bld.span./maximum(numadIn_bld.span), numadIn_bld.chord,LinRange(0,1,NumADBldNds))
+
+#         # Discretely assign the blade airfoils based on the next closest neighbor
+#         bld_airfoil_filenames = fill("nothing",NumADBldNds) #TODO: cable drag?
+#         for (ispan_numad,span_numad) in enumerate(numadIn_bld.span./maximum(numadIn_bld.span))
+#             for (ispan,span_slices) in enumerate(collect(LinRange(0,1,NumADBldNds)))
+#                 if bld_airfoil_filenames[ispan]=="nothing" && span_slices<=span_numad
+#                     bld_airfoil_filenames[ispan] = "$(numadIn_bld.airfoil[ispan_numad]).dat"
+#                 end
+#             end
+#         end
+        
+#         if meshtype == "ARCUS" 
+#             blade_filenames = ["$path/blade$i.dat" for i=1:Nbld]
+#             blade_chords = [bldchord_spl for i=1:Nbld]
+#             blade_Nnodes = [NumADBldNds for i=1:Nbld]
+#             airfoil_filenames = [bld_airfoil_filenames for i=1:Nbld]
+            
+#         else
+#             blade_filenames = ["$path/blade$i.dat" for i=1:Nbld]
+#             blade_chords = [bldchord_spl for i=1:Nbld]
+#             blade_Nnodes = [NumADBldNds for i=1:Nbld]
+#             airfoil_filenames = collect(Iterators.flatten([bld_airfoil_filenames for i=1:Nbld]))
+            
+#             for istrut = 1:Nstrutperbld
+#                 strutchord_spl = safeakima(numadIn_strut[istrut].span./maximum(numadIn_strut[istrut].span), numadIn_strut[istrut].chord,LinRange(0,1,NumADStrutNds))
+#                 for ibld = 1:Nbld
+#                     blade_filenames = [blade_filenames;"$path/strut$(istrut)_bld$ibld.dat"]
+#                     blade_chords = [blade_chords;[strutchord_spl]]
+#                     blade_Nnodes = [blade_Nnodes;NumADStrutNds]
+
+#                     # Discretely assign the strut airfoils based on the next closest neighbor
+#                     strut_airfoil_filenames = fill("nothing",NumADStrutNds)
+#                     for (ispan_numad,span_numad) in enumerate(numadIn_strut[istrut].span./maximum(numadIn_strut[istrut].span))
+#                         for (ispan,span_slices) in enumerate(collect(LinRange(0,1,NumADBldNds)))
+#                             if strut_airfoil_filenames[ispan]=="nothing" && span_slices<=span_numad
+#                                 strut_airfoil_filenames[ispan] = "$(numadIn_strut[istrut].airfoil[ispan_numad]).dat"
+#                             end
+#                         end
+#                     end
+
+#                     airfoil_filenames = [airfoil_filenames; strut_airfoil_filenames]
+
+#                 end
+#             end
+#         end
+
+#         OWENSOpenFASTWrappers.writeADinputFile(ad_input_file,blade_filenames,airfoil_filenames,OLAF_filename;rho)
+
+#         NumADBody = length(AD15bldNdIdxRng[:,1])
+#         bld_len = zeros(NumADBody)
+#         # bladefileissaved = false
+#         for (iADBody,filename) in enumerate(blade_filenames)
+#             strt_idx = AD15bldNdIdxRng[iADBody,1]
+#             end_idx = AD15bldNdIdxRng[iADBody,2]
+#             if end_idx<strt_idx
+#                 tmp_end = end_idx
+#                 end_idx = strt_idx
+#                 strt_idx = tmp_end
+#             end
+
+#             #Get the blade length
+#             x1 = mymesh.x[strt_idx]
+#             x2 = mymesh.x[end_idx]
+#             y1 = mymesh.y[strt_idx]
+#             y2 = mymesh.y[end_idx]
+#             z1 = mymesh.z[strt_idx]
+#             z2 = mymesh.z[end_idx]
+#             bld_len[iADBody] = sqrt((x2-x1)^2+(y2-y1)^2+(z2-z1)^2)
+
+#             #Get the blade shape
+#             ADshapeZ = collect(LinRange(0,H,NumADBldNds))
+#             xmesh = mymesh.x[strt_idx:end_idx]
+#             ymesh = mymesh.y[strt_idx:end_idx]
+#             ADshapeX = sqrt.(xmesh.^2 .+ ymesh.^2)
+#             ADshapeX .-= ADshapeX[1] #get it starting at zero #TODO: make robust for blades that don't start at 0
+#             ADshapeXspl = safeakima(LinRange(0,H,length(ADshapeX)),ADshapeX,ADshapeZ)
+            
+#             if iADBody<=Nbld #&& !bladefileissaved#Note that the blades can be curved and are assumed to be oriented vertically
+#                 # bladefileissaved = true
+#                 BlSpn0=ADshapeZ
+#                 BlCrvAC0=ADshapeXspl
+
+#                 bladeangle = (iADBody-1)*2.0*pi/Nbld + angularOffset #TODO: pitch offset and twist offset that isn't from the helical
+
+#                 BlSpn = ADshapeZ
+#                 blade_twist = atan.(xmesh,ymesh).-bladeangle
+#                 if meshtype == "Darrieus"
+#                     blade_twist[1] = 0.0 #TODO: near zero atan is ill defined above, should make smarter. Plus, it is essentially zeroed out below, so that may not be needed, and rather the structural definition of twist plus pitch
+#                     blade_twist[end] = 0.0
+#                 end
+
+#                 #TODO: reevalueate these equations and make sure they are robust against varying designs
+#                 BlCrvACinput = -ymesh.*sin(bladeangle).+xmesh.*cos(bladeangle)
+#                 BlCrvACinput = BlCrvACinput .- BlCrvACinput[1]
+#                 BlSwpAC = -safeakima(LinRange(0,H,length(BlCrvACinput)),BlCrvACinput,ADshapeZ)
+
+#                 BlSwpACinput = xmesh.*sin(bladeangle).+ymesh.*cos(bladeangle)
+#                 BlSwpACinput = BlSwpACinput .- BlSwpACinput[1]
+#                 BlCrvAC = safeakima(LinRange(0,H,length(BlSwpACinput)),BlSwpACinput,ADshapeZ)
+
+#                 BlCrvAng = zeros(blade_Nnodes[iADBody])
+
+#                 BlTwistinput =(blade_twist.-blade_twist[2])*180/pi
+#                 BlTwist = safeakima(LinRange(0,H,length(BlTwistinput)),BlTwistinput,ADshapeZ)
+
+#                 BlChord=blade_chords[iADBody]
+
+#                 BlAFID=collect((iADBody-1)*NumADBldNds+1:iADBody*NumADBldNds)
+
+#             elseif iADBody>Nbld # while the arms/struts are assumed to be straight and are oriented by the mesh angle
+#                 BlSpn=collect(LinRange(0,bld_len[iADBody],blade_Nnodes[iADBody]))
+#                 BlCrvAC=zeros(blade_Nnodes[iADBody])
+#                 BlSwpAC=zeros(blade_Nnodes[iADBody])
+#                 BlCrvAng=zeros(blade_Nnodes[iADBody])
+#                 BlTwist=zeros(blade_Nnodes[iADBody])
+#                 BlChord=blade_chords[iADBody]
+#                 BlAFID=collect((iADBody-1)*NumADStrutNds+1:iADBody*NumADStrutNds)
+#             end      
+#             OWENSOpenFASTWrappers.writeADbladeFile(filename;NumBlNds=blade_Nnodes[iADBody],BlSpn,BlCrvAC,BlSwpAC,BlCrvAng,BlTwist,BlChord,BlAFID)     
+#         end
+
+#         OWENSOpenFASTWrappers.writeOLAFfile(OLAF_filename;nNWPanel=200,nFWPanels=10)
+
+#         OWENSOpenFASTWrappers.writeIWfile(Vinf,ifw_input_file;windINPfilename)
+
+#         OWENSOpenFASTWrappers.setupTurb(adi_lib,ad_input_file,ifw_input_file,adi_rootname,[shapeX],[shapeZ],[B],[Htwr_base],[mymesh],[myort],[AD15bldNdIdxRng],[AD15bldElIdxRng];
+#                 rho     = rho,
+#                 adi_dt  = delta_t,
+#                 adi_tmax= numTS*delta_t,
+#                 omega   = [omega],
+#                 adi_wrOuts = 1,     # write output file [0 none, 1 txt, 2 binary, 3 both]
+#                 adi_DT_Outs = delta_t,   # output frequency
+#                 numTurbines = 1,
+#                 refPos=[[0,0,0]],
+#                 hubPos=[[0,0,0.0]],
+#                 hubAngle=[[0,0,0]],
+#                 nacPos=[[0,0,0]],
+#                 adi_nstrut=[Nstrutperbld],
+#                 adi_debug=0,
+#                 isHAWT = false     # true for HAWT, false for crossflow or VAWT
+#                 )
+
+#         aeroForcesAD(t,azi) = OWENS.mapAD15(t,azi,[mymesh],OWENSOpenFASTWrappers.advanceAD15;alwaysrecalc=true,verbosity)
+#         deformAeroAD=OWENSOpenFASTWrappers.deformAD15
+#     end
+
+#     nothing
+
+#     # Calculate mass breakout of each material
+#     mass_breakout_bld = OWENS.get_material_mass(plyprops_bld,numadIn_bld)
+#     mass_breakout_blds = mass_breakout_bld.*B
+#     mass_breakout_twr = OWENS.get_material_mass(plyprops_twr,numadIn_twr)
+
+
+#     # If the sectional properties material files includes cost information, that is combined with the density 
+#     # to estimate the overall material cost of of materials in the blades
+
+#     if verbosity>0
+        
+#         println("\n Combined Blades Mass Breakout")
+#         for (i,name) in enumerate(plyprops_bld.names)
+#             println("$name $(mass_breakout_blds[i]) kg, $(plyprops_bld.costs[i]) \$/kg: \$$(mass_breakout_blds[i]*plyprops_bld.costs[i])")
+#         end
+        
+#         println("\n Combined Struts Mass Breakout")
+#         for (i,name) in enumerate(plyprops_strut.names)
+#             println("$name $(mass_breakout_struts[i]) kg, $(plyprops_strut.costs[i]) \$/kg: \$$(mass_breakout_struts[i]*plyprops_strut.costs[i])")
+#         end
+
+#         println("\nTower Mass Breakout")
+#         for (i,name) in enumerate(plyprops_twr.names)
+#             println("$name $(mass_breakout_twr[i]) kg, $(plyprops_twr.costs[i]) \$/kg: \$$(mass_breakout_twr[i]*plyprops_twr.costs[i])")
+#         end
+#         println("\nTotal Mass: $(sum(mass_breakout_blds)+ sum(mass_breakout_twr) + sum(mass_breakout_struts)) kg")
+
+#         println("Total Material Cost Blades: \$$(sum(mass_breakout_blds.*plyprops_bld.costs))")
+#         println("Total Material Cost Struts: \$$(coststruts)")
+#         println("Total Material Cost Tower: \$$(sum(mass_breakout_twr.*plyprops_twr.costs))")
+#         println("Total Material Cost: \$$(sum(mass_breakout_blds.*plyprops_bld.costs)+ sum(mass_breakout_twr.*plyprops_twr.costs) + coststruts)")
+        
+#     end
+
+#     if AD15On
+#         return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
+#         stiff_twr, stiff_bld,bld_precompinput,
+#         bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+#         twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForcesAD,deformAeroAD,
+#         mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs,stiff_array,mass_array
+#     else
+#         return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
+#         stiff_twr, stiff_bld,bld_precompinput,
+#         bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+#         twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForcesACDMS,deformAeroACDMS,
+#         mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs,stiff_array,mass_array
+#     end
+# end
 
 
 function get_material_mass(plyprops_in,numadIn;int_start=numadIn.span[1],int_stop=numadIn.span[end])
