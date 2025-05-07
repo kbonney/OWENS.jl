@@ -1,5 +1,5 @@
 
-function runOWENSWINDIO(modelopt,windio,path)
+function runOWENSWINDIO(modelopt, windio, path)
     if isa(windio, String)
         windio = Design_Data(windio)
     end
@@ -20,7 +20,7 @@ function runOWENSWINDIO(modelopt,windio,path)
     # rated_power = windio[:assembly][:rated_power]
     # lifetime = windio[:assembly][:lifetime]
     # marine_hydro = windio[:assembly][:marine_hydro]
-    
+
     # Components: blade, strut, tower, cable all reuse the blade format
     blade_mountpoint = windio[:components][:blade][:outer_shape_bem][:blade_mountpoint]
     # blade_x_grid = windio[:components][:blade][:internal_structure_2d_fem][:reference_axis][:x][:grid]
@@ -34,10 +34,10 @@ function runOWENSWINDIO(modelopt,windio,path)
 
     tower_z = windio[:components][:tower][:outer_shape_bem][:reference_axis][:z][:values] #Used
 
-    
+
     Blade_Height = maximum(blade_z) #TODO: resolve DLC dependence
-    Blade_Radius = maximum(sqrt.(blade_x.^2 .+ blade_y.^2))
-    
+    Blade_Radius = maximum(sqrt.(blade_x .^ 2 .+ blade_y .^ 2))
+
     Htwr_base = hub_height-Blade_Height/2
     Htwr_blds = maximum(tower_z)-Htwr_base
 
@@ -55,7 +55,7 @@ function runOWENSWINDIO(modelopt,windio,path)
     # Vin = windio[:control][:supervisory][:Vin] 
     # Vout = windio[:control][:supervisory][:Vout] 
     # maxTS = windio[:control][:supervisory][:maxTS] 
- 
+
     # PC_zeta = windio[:control][:pitch][:PC_zeta]
     # PC_omega = windio[:control][:pitch][:PC_omega]
     # ps_percent = windio[:control][:pitch][:ps_percent]
@@ -70,13 +70,13 @@ function runOWENSWINDIO(modelopt,windio,path)
     # max_torque_rate = windio[:control][:torque][:max_torque_rate]
     # VS_minspd = windio[:control][:torque][:VS_minspd]
     # VS_maxspd = windio[:control][:torque][:VS_maxspd]
-    
+
     # ss_vsgain = windio[:control][:setpoint_smooth][:ss_vsgain]
     # ss_pcgain = windio[:control][:setpoint_smooth][:ss_pcgain]
-    
+
     # limit_type = windio[:control][:shutdown][:limit_type]
     # limit_value = windio[:control][:shutdown][:limit_value]
-    
+
     # Environment
     air_density = windio[:environment][:air_density] #used
     air_dyn_viscosity = windio[:environment][:air_dyn_viscosity] #used
@@ -93,7 +93,7 @@ function runOWENSWINDIO(modelopt,windio,path)
     # air_vapor_pressure = windio[:environment][:air_vapor_pressure]
     # significant_wave_height = windio[:environment][:significant_wave_height]
     # significant_wave_period = windio[:environment][:significant_wave_period]
-    
+
     # BOS
     # plant_turbine_spacing = windio[:bos][:plant_turbine_spacing]
     # plant_row_spacing = windio[:bos][:plant_row_spacing]
@@ -146,7 +146,7 @@ function runOWENSWINDIO(modelopt,windio,path)
     # benchmark_price = windio[:costs][:benchmark_price]
 
     if isa(gravity, Float64)
-        gravityOn = [0,0,gravity]
+        gravityOn = [0, 0, gravity]
     else
         gravityOn = gravity
     end
@@ -168,10 +168,14 @@ function runOWENSWINDIO(modelopt,windio,path)
     VTKsaveName = modelopt.OWENS_Options.VTKsaveName
     aeroLoadsOn = modelopt.OWENS_Options.aeroLoadsOn
     structuralModel = modelopt.OWENS_Options.structuralModel
-    Prescribed_RPM_time_controlpoints = modelopt.OWENS_Options.Prescribed_RPM_time_controlpoints
-    Prescribed_RPM_RPM_controlpoints = modelopt.OWENS_Options.Prescribed_RPM_RPM_controlpoints
-    Prescribed_Vinf_time_controlpoints = modelopt.OWENS_Options.Prescribed_Vinf_time_controlpoints
-    Prescribed_Vinf_Vinf_controlpoints = modelopt.OWENS_Options.Prescribed_Vinf_Vinf_controlpoints
+    Prescribed_RPM_time_controlpoints =
+        modelopt.OWENS_Options.Prescribed_RPM_time_controlpoints
+    Prescribed_RPM_RPM_controlpoints =
+        modelopt.OWENS_Options.Prescribed_RPM_RPM_controlpoints
+    Prescribed_Vinf_time_controlpoints =
+        modelopt.OWENS_Options.Prescribed_Vinf_time_controlpoints
+    Prescribed_Vinf_Vinf_controlpoints =
+        modelopt.OWENS_Options.Prescribed_Vinf_Vinf_controlpoints
 
     # OWENSAero Options
     Nslices = modelopt.OWENSAero_Options.Nslices
@@ -218,7 +222,8 @@ function runOWENSWINDIO(modelopt,windio,path)
     alpha = modelopt.OWENSFEA_Options.alpha
     gamma = modelopt.OWENSFEA_Options.gamma
     AddedMass_Coeff_Ca = modelopt.OWENSFEA_Options.AddedMass_Coeff_Ca
-    platformTurbineConnectionNodeNumber = modelopt.OWENSFEA_Options.platformTurbineConnectionNodeNumber
+    platformTurbineConnectionNodeNumber =
+        modelopt.OWENSFEA_Options.platformTurbineConnectionNodeNumber
     aeroElasticOn = modelopt.OWENSFEA_Options.aeroElasticOn
     spinUpOn = modelopt.OWENSFEA_Options.spinUpOn
     predef = modelopt.OWENSFEA_Options.predef
@@ -235,7 +240,7 @@ function runOWENSWINDIO(modelopt,windio,path)
     md_input_file = modelopt.OWENSOpenFASTWrappers_Options.md_input_file
     potflowfile = modelopt.OWENSOpenFASTWrappers_Options.potflowfile
     WindType = modelopt.OWENSOpenFASTWrappers_Options.WindType
-    
+
     if adi_lib == "nothing"
         adi_lib = nothing
     end
@@ -287,23 +292,23 @@ function runOWENSWINDIO(modelopt,windio,path)
     meshtype = turbineType #derived, should probably be cleaned up TODO
     initCond = [] #OWENSFEA initial conditions array, will be derived at this level, if using the OWENS scripting method, this can be used to initalize the structure
     jointTransform = 0.0 #OWENSFEA, derived matrix to transform from total matrix to the reduced matrix and vice-versa
-    reducedDOFList = zeros(Int,2) #OWENSFEA, derived array that maps the joint-reduced dofs
+    reducedDOFList = zeros(Int, 2) #OWENSFEA, derived array that maps the joint-reduced dofs
     nodalTerms = 0.0 #OWENSFEA the ability to apply concentrated nodal masses and forces etc., currently only available at the scripting level of analysis
     stack_layers_bld = nothing #, enables direct specification of the numbers of stack layers in the numad format
-    stack_layers_scale = [1.0,1.0] #, simple scaling across the blade span with a linear interpolation between
-    chord_scale = [1.0,1.0] #, simple scaling across the blade span with a linear interpolation between
-    thickness_scale = [1.0,1.0] #, simple scaling across the blade span with a linear interpolation between
+    stack_layers_scale = [1.0, 1.0] #, simple scaling across the blade span with a linear interpolation between
+    chord_scale = [1.0, 1.0] #, simple scaling across the blade span with a linear interpolation between
+    thickness_scale = [1.0, 1.0] #, simple scaling across the blade span with a linear interpolation between
 
     OmegaInit = 7.2/60 #TODO: simplify this in the code since it is redundant
     aeroloadfile = "$module_path/../test/data/input_files_test/DVAWT_2B_LCDT_ElementData.csv"
     owensfile = "$module_path/../test/data/input_files_test/_15mTower_transient_dvawt_c_2_lcdt.owens"
-    
-    
-    driveShaftProps = DriveShaftProps(driveShaft_K,driveShaft_C)
+
+
+    driveShaftProps = DriveShaftProps(driveShaft_K, driveShaft_C)
 
     custommesh = nothing
 
-    tsave_idx=1:3:numTS-1
+    tsave_idx=1:3:(numTS-1)
 
     NuMad_geom_xlscsv_file_twr = windio
     NuMad_mat_xlscsv_file_twr = windio
@@ -320,31 +325,58 @@ function runOWENSWINDIO(modelopt,windio,path)
 
     R = maximum(blade_x) #m 
     H = maximum(blade_z) #m
-    
+
     nothing
 
     # Call the helper function that builds the mesh, calculates the sectional properties,
     # and aligns the sectional properties to the mesh elements, 
 
-    mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
-    stiff_twr, stiff_bld,bld_precompinput,
-    bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
-    twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForces,deformAero,
-    mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng = OWENS.setupOWENS(OWENSAero,path;
-        rho=air_density,
-        mu=air_dyn_viscosity,
+    mymesh,
+    myel,
+    myort,
+    myjoint,
+    sectionPropsArray,
+    mass_twr,
+    mass_bld,
+    stiff_twr,
+    stiff_bld,
+    bld_precompinput,
+    bld_precompoutput,
+    plyprops_bld,
+    numadIn_bld,
+    lam_U_bld,
+    lam_L_bld,
+    twr_precompinput,
+    twr_precompoutput,
+    plyprops_twr,
+    numadIn_twr,
+    lam_U_twr,
+    lam_L_twr,
+    aeroForces,
+    deformAero,
+    mass_breakout_blds,
+    mass_breakout_twr,
+    system,
+    assembly,
+    sections,
+    AD15bldNdIdxRng,
+    AD15bldElIdxRng = OWENS.setupOWENS(
+        OWENSAero,
+        path;
+        rho = air_density,
+        mu = air_dyn_viscosity,
         Nslices,
         ntheta,
-        RPM=Prescribed_RPM_RPM_controlpoints[1],
-        Vinf=Prescribed_Vinf_Vinf_controlpoints[1],
-        eta=blade_mountpoint,
-        B=number_of_blades,
+        RPM = Prescribed_RPM_RPM_controlpoints[1],
+        Vinf = Prescribed_Vinf_Vinf_controlpoints[1],
+        eta = blade_mountpoint,
+        B = number_of_blades,
         H,
         R,
         AD15hubR,
-        shapeZ, 
+        shapeZ,
         shapeX,
-        shapeY, 
+        shapeY,
         ifw,
         WindType,
         delta_t,
@@ -360,8 +392,8 @@ function runOWENSWINDIO(modelopt,windio,path)
         NuMad_geom_xlscsv_file_strut,
         NuMad_mat_xlscsv_file_strut,
         Htwr_base,
-        ntelem, 
-        nbelem, 
+        ntelem,
+        nbelem,
         ncelem,
         nselem,
         joint_type,
@@ -382,7 +414,8 @@ function runOWENSWINDIO(modelopt,windio,path)
         Aero_AddedMass_Active,
         Aero_RotAccel_Active,
         Aero_Buoyancy_Active,
-        custommesh)
+        custommesh,
+    )
 
     nothing
 
@@ -397,12 +430,14 @@ function runOWENSWINDIO(modelopt,windio,path)
     # 1 is constrained in all 6 degrees of freedom to have a displacement of 0.  You can change this displacement to allow for things
     # like pretension, and you can apply boundary conditions to any node.
 
-    pBC = [1 1 0
-    1 2 0
-    1 3 0
-    1 4 0
-    1 5 0
-    1 6 0]
+    pBC = [
+        1 1 0
+        1 2 0
+        1 3 0
+        1 4 0
+        1 5 0
+        1 6 0
+    ]
 
     nothing
 
@@ -414,51 +449,51 @@ function runOWENSWINDIO(modelopt,windio,path)
         AD15On = false
     end
 
-     # Handle the control strategy #TODO: function and hook up discon controller
+    # Handle the control strategy #TODO: function and hook up discon controller
     if DLCs != "none"
         normalRPM = Prescribed_RPM_RPM_controlpoints[1] ./ 60
         slowRPM = 1.0 #RPM
-        tocp = [0.0,10.0,30.0,1000.0]
+        tocp = [0.0, 10.0, 30.0, 1000.0]
         turbineStartup = 0
         generatorOn = false
         useGeneratorFunction = false
         throwawayTimeSteps=1#round(Int,10.0/delta_t) # 10 seconds
         if controlStrategy == "normal"
-            Omegaocp = [normalRPM,normalRPM,normalRPM,normalRPM]./60 #hz
+            Omegaocp = [normalRPM, normalRPM, normalRPM, normalRPM] ./ 60 #hz
             turbineStartup = 0
             generatorOn = false
             useGeneratorFunction = false
         elseif controlStrategy == "freewheelatNormalOperatingRPM"
-            Omegaocp = [normalRPM,normalRPM,normalRPM,normalRPM]./60 #hz
+            Omegaocp = [normalRPM, normalRPM, normalRPM, normalRPM] ./ 60 #hz
             turbineStartup = 2
             generatorOn = false
             useGeneratorFunction = false
         elseif controlStrategy == "startup"
             throwawayTimeSteps = 1
-            tocp = [0.0,30.0,1000.0]
-            Omegaocp = [slowRPM,normalRPM,normalRPM]./60 #hz
+            tocp = [0.0, 30.0, 1000.0]
+            Omegaocp = [slowRPM, normalRPM, normalRPM] ./ 60 #hz
             turbineStartup = 0
             generatorOn = false
             useGeneratorFunction = false
         elseif controlStrategy == "shutdown"
-            tocp = [0.0,10.0,15.0,30.0,1000.0]
-            Omegaocp = [normalRPM,normalRPM,normalRPM/2,slowRPM,0.0]./60 #hz
+            tocp = [0.0, 10.0, 15.0, 30.0, 1000.0]
+            Omegaocp = [normalRPM, normalRPM, normalRPM/2, slowRPM, 0.0] ./ 60 #hz
         elseif controlStrategy == "emergencyshutdown"
-            tocp = [0.0,10.0,15.0,30.0,1000.0]
-            Omegaocp = [normalRPM,normalRPM,slowRPM,0.0,0.0]./60 #hz
+            tocp = [0.0, 10.0, 15.0, 30.0, 1000.0]
+            Omegaocp = [normalRPM, normalRPM, slowRPM, 0.0, 0.0] ./ 60 #hz
         elseif controlStrategy == "parked"
-            Omegaocp = [slowRPM,slowRPM,slowRPM,slowRPM]./60 #hz
+            Omegaocp = [slowRPM, slowRPM, slowRPM, slowRPM] ./ 60 #hz
         elseif controlStrategy == "parked_idle"
-            Omegaocp = [slowRPM,slowRPM,slowRPM,slowRPM]./60 #hz
+            Omegaocp = [slowRPM, slowRPM, slowRPM, slowRPM] ./ 60 #hz
             turbineStartup = 2
             generatorOn = false
             useGeneratorFunction = false
         elseif controlStrategy == "parked_yaw"
-            Omegaocp = [slowRPM,slowRPM,slowRPM,slowRPM]./60 #hz
+            Omegaocp = [slowRPM, slowRPM, slowRPM, slowRPM] ./ 60 #hz
         elseif controlStrategy == "parked"
-            Omegaocp = [slowRPM,slowRPM,slowRPM,slowRPM]./60 #hz
+            Omegaocp = [slowRPM, slowRPM, slowRPM, slowRPM] ./ 60 #hz
         elseif controlStrategy == "transport"
-            Omegaocp = [slowRPM,slowRPM,slowRPM,slowRPM]./60 #hz
+            Omegaocp = [slowRPM, slowRPM, slowRPM, slowRPM] ./ 60 #hz
         elseif controlStrategy == "prescribedRPM"
             tocp = Prescribed_RPM_time_controlpoints
             Omegaocp = Prescribed_RPM_RPM_controlpoints ./ 60
@@ -476,86 +511,90 @@ function runOWENSWINDIO(modelopt,windio,path)
 
     println("controlStrategy: $controlStrategy")
 
-    inputs = OWENS.Inputs(;analysisType = structuralModel,
-    tocp,
-    Omegaocp,
-    tocp_Vinf = Prescribed_Vinf_time_controlpoints,
-    Vinfocp = Prescribed_Vinf_Vinf_controlpoints,
-    numTS,
-    delta_t,
-    AD15On,
-    aeroLoadsOn,
-    turbineStartup,
-    usingRotorSpeedFunction,
-    driveTrainOn,
-    generatorOn,
-    platformActive,
-    topsideOn,
-    interpOrder,
-    hd_input_file,
-    ss_input_file,
-    md_input_file,
-    JgearBox,
-    gearRatio,
-    gearBoxEfficiency,
-    useGeneratorFunction,
-    generatorProps,
-    ratedTorque,
-    zeroTorqueGenSpeed,
-    pulloutRatio,
-    ratedGenSlipPerc,
-    OmegaGenStart,
-    omegaControl,
-    OmegaInit,
-    aeroloadfile,
-    owensfile,
-    potflowfile,
-    dataOutputFilename,
-    numDOFPerNode,
-    bladeData,
-    rigid,
-    driveShaftProps,
-    TOL,
-    MAXITER)
+    inputs = OWENS.Inputs(;
+        analysisType = structuralModel,
+        tocp,
+        Omegaocp,
+        tocp_Vinf = Prescribed_Vinf_time_controlpoints,
+        Vinfocp = Prescribed_Vinf_Vinf_controlpoints,
+        numTS,
+        delta_t,
+        AD15On,
+        aeroLoadsOn,
+        turbineStartup,
+        usingRotorSpeedFunction,
+        driveTrainOn,
+        generatorOn,
+        platformActive,
+        topsideOn,
+        interpOrder,
+        hd_input_file,
+        ss_input_file,
+        md_input_file,
+        JgearBox,
+        gearRatio,
+        gearBoxEfficiency,
+        useGeneratorFunction,
+        generatorProps,
+        ratedTorque,
+        zeroTorqueGenSpeed,
+        pulloutRatio,
+        ratedGenSlipPerc,
+        OmegaGenStart,
+        omegaControl,
+        OmegaInit,
+        aeroloadfile,
+        owensfile,
+        potflowfile,
+        dataOutputFilename,
+        numDOFPerNode,
+        bladeData,
+        rigid,
+        driveShaftProps,
+        TOL,
+        MAXITER,
+    )
 
     nothing
 
     # Then there are inputs for the finite element models, also, please see the api reference for specifics on the options (TODO: ensure that this is propogated to the docs)
 
-    feamodel = OWENS.FEAModel(;analysisType = structuralModel,
-    airDensity=air_density,
-    pBC,
-    nlOn,
-    gravityOn,
-    numNodes = mymesh.numNodes,
-    RayleighAlpha,
-    RayleighBeta,
-    joint = myjoint,
-    iterationType,
-    initCond,
-    aeroElasticOn, #for the automated flutter model
-    guessFreq,
-    dataOutputFilename,
-    jointTransform,
-    reducedDOFList,
-    numDOFPerNode,
-    platformTurbineConnectionNodeNumber,
-    spinUpOn,
-    numModes,
-    nlParams, # can pass in strut, or leave at 0 to use other inputs
-    adaptiveLoadSteppingFlag,
-    tolerance,
-    maxIterations,
-    maxNumLoadSteps,
-    minLoadStepDelta,
-    minLoadStep,
-    prescribedLoadStep,
-    predef,
-    elementOrder,
-    alpha,
-    gamma,
-    AddedMass_Coeff_Ca,
-    nodalTerms)
+    feamodel = OWENS.FEAModel(;
+        analysisType = structuralModel,
+        airDensity = air_density,
+        pBC,
+        nlOn,
+        gravityOn,
+        numNodes = mymesh.numNodes,
+        RayleighAlpha,
+        RayleighBeta,
+        joint = myjoint,
+        iterationType,
+        initCond,
+        aeroElasticOn, #for the automated flutter model
+        guessFreq,
+        dataOutputFilename,
+        jointTransform,
+        reducedDOFList,
+        numDOFPerNode,
+        platformTurbineConnectionNodeNumber,
+        spinUpOn,
+        numModes,
+        nlParams, # can pass in strut, or leave at 0 to use other inputs
+        adaptiveLoadSteppingFlag,
+        tolerance,
+        maxIterations,
+        maxNumLoadSteps,
+        minLoadStepDelta,
+        minLoadStep,
+        prescribedLoadStep,
+        predef,
+        elementOrder,
+        alpha,
+        gamma,
+        AddedMass_Coeff_Ca,
+        nodalTerms,
+    )
 
     nothing
 
@@ -563,11 +602,40 @@ function runOWENSWINDIO(modelopt,windio,path)
     # and propogates things in time.
 
     println("Running Unsteady")
-    t, aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,FReactionHist,
-    FTwrBsHist,genTorque,genPower,torqueDriveShaft,uHist,uHist_prp,epsilon_x_hist,epsilon_y_hist,
-    epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,FPtfmHist,FHydroHist,FMooringHist,
-    topFexternal_hist,rbDataHist = OWENS.Unsteady_Land(inputs;system,assembly,
-    topModel=feamodel,topMesh=mymesh,topEl=myel,aero=aeroForces,deformAero)
+    t,
+    aziHist,
+    OmegaHist,
+    OmegaDotHist,
+    gbHist,
+    gbDotHist,
+    gbDotDotHist,
+    FReactionHist,
+    FTwrBsHist,
+    genTorque,
+    genPower,
+    torqueDriveShaft,
+    uHist,
+    uHist_prp,
+    epsilon_x_hist,
+    epsilon_y_hist,
+    epsilon_z_hist,
+    kappa_x_hist,
+    kappa_y_hist,
+    kappa_z_hist,
+    FPtfmHist,
+    FHydroHist,
+    FMooringHist,
+    topFexternal_hist,
+    rbDataHist = OWENS.Unsteady_Land(
+        inputs;
+        system,
+        assembly,
+        topModel = feamodel,
+        topMesh = mymesh,
+        topEl = myel,
+        aero = aeroForces,
+        deformAero,
+    )
 
     nothing
 
@@ -575,9 +643,26 @@ function runOWENSWINDIO(modelopt,windio,path)
     # deformations.  Additionaly, there is a method to input custom values and have them show up on the vtk surface mesh
     # for example, strain, or reaction force, etc.  This is described in more detail in the api reference for the function and: TODO
 
-    OWENS.OWENSVTK(VTKsaveName,t,uHist,system,assembly,sections,aziHist,mymesh,myel,
-        epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,
-        FReactionHist,topFexternal_hist;tsave_idx)
+    OWENS.OWENSVTK(
+        VTKsaveName,
+        t,
+        uHist,
+        system,
+        assembly,
+        sections,
+        aziHist,
+        mymesh,
+        myel,
+        epsilon_x_hist,
+        epsilon_y_hist,
+        epsilon_z_hist,
+        kappa_x_hist,
+        kappa_y_hist,
+        kappa_z_hist,
+        FReactionHist,
+        topFexternal_hist;
+        tsave_idx,
+    )
 
     nothing
 
@@ -588,16 +673,101 @@ function runOWENSWINDIO(modelopt,windio,path)
     #### Ultimate Failure #####
     ##########################################
 
-    massOwens,stress_U,SF_ult_U,SF_buck_U,stress_L,SF_ult_L,SF_buck_L,stress_TU,SF_ult_TU,
-    SF_buck_TU,stress_TL,SF_ult_TL,SF_buck_TL,topstrainout_blade_U,topstrainout_blade_L,
-    topstrainout_tower_U,topstrainout_tower_L,topDamage_blade_U,
-    topDamage_blade_L,topDamage_tower_U,topDamage_tower_L = OWENS.extractSF(bld_precompinput,
-    bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
-    twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,
-    mymesh,myel,myort,number_of_blades,epsilon_x_hist,kappa_y_hist,kappa_z_hist,epsilon_z_hist,
-    kappa_x_hist,epsilon_y_hist;verbosity, #Verbosity 0:no printing, 1: summary, 2: summary and spanwise worst safety factor # epsilon_x_hist_1,kappa_y_hist_1,kappa_z_hist_1,epsilon_z_hist_1,kappa_x_hist_1,epsilon_y_hist_1,
-    Twr_LE_U_idx=1,Twr_LE_L_idx=1,delta_t,
-    AD15bldNdIdxRng,AD15bldElIdxRng,strut_precompoutput=nothing) #TODO: add in ability to have material safety factors and load safety factors
+    massOwens,
+    stress_U,
+    SF_ult_U,
+    SF_buck_U,
+    stress_L,
+    SF_ult_L,
+    SF_buck_L,
+    stress_TU,
+    SF_ult_TU,
+    SF_buck_TU,
+    stress_TL,
+    SF_ult_TL,
+    SF_buck_TL,
+    topstrainout_blade_U,
+    topstrainout_blade_L,
+    topstrainout_tower_U,
+    topstrainout_tower_L,
+    topDamage_blade_U,
+    topDamage_blade_L,
+    topDamage_tower_U,
+    topDamage_tower_L = OWENS.extractSF(
+        bld_precompinput,
+        bld_precompoutput,
+        plyprops_bld,
+        numadIn_bld,
+        lam_U_bld,
+        lam_L_bld,
+        twr_precompinput,
+        twr_precompoutput,
+        plyprops_twr,
+        numadIn_twr,
+        lam_U_twr,
+        lam_L_twr,
+        mymesh,
+        myel,
+        myort,
+        number_of_blades,
+        epsilon_x_hist,
+        kappa_y_hist,
+        kappa_z_hist,
+        epsilon_z_hist,
+        kappa_x_hist,
+        epsilon_y_hist;
+        verbosity, #Verbosity 0:no printing, 1: summary, 2: summary and spanwise worst safety factor # epsilon_x_hist_1,kappa_y_hist_1,kappa_z_hist_1,epsilon_z_hist_1,kappa_x_hist_1,epsilon_y_hist_1,
+        Twr_LE_U_idx = 1,
+        Twr_LE_L_idx = 1,
+        delta_t,
+        AD15bldNdIdxRng,
+        AD15bldElIdxRng,
+        strut_precompoutput = nothing,
+    ) #TODO: add in ability to have material safety factors and load safety factors
 
-    outputData(;mymesh,inputs,t,aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,FReactionHist,genTorque,genPower,torqueDriveShaft,uHist,uHist_prp,epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist,FTwrBsHist,massOwens,stress_U,SF_ult_U,SF_buck_U,stress_L,SF_ult_L,SF_buck_L,stress_TU,SF_ult_TU,SF_buck_TU,stress_TL,SF_ult_TL,SF_buck_TL,topstrainout_blade_U,topstrainout_blade_L,topstrainout_tower_U,topstrainout_tower_L,topDamage_blade_U,topDamage_blade_L,topDamage_tower_U,topDamage_tower_L)
+    outputData(;
+        mymesh,
+        inputs,
+        t,
+        aziHist,
+        OmegaHist,
+        OmegaDotHist,
+        gbHist,
+        gbDotHist,
+        gbDotDotHist,
+        FReactionHist,
+        genTorque,
+        genPower,
+        torqueDriveShaft,
+        uHist,
+        uHist_prp,
+        epsilon_x_hist,
+        epsilon_y_hist,
+        epsilon_z_hist,
+        kappa_x_hist,
+        kappa_y_hist,
+        kappa_z_hist,
+        FTwrBsHist,
+        massOwens,
+        stress_U,
+        SF_ult_U,
+        SF_buck_U,
+        stress_L,
+        SF_ult_L,
+        SF_buck_L,
+        stress_TU,
+        SF_ult_TU,
+        SF_buck_TU,
+        stress_TL,
+        SF_ult_TL,
+        SF_buck_TL,
+        topstrainout_blade_U,
+        topstrainout_blade_L,
+        topstrainout_tower_U,
+        topstrainout_tower_L,
+        topDamage_blade_U,
+        topDamage_blade_L,
+        topDamage_tower_U,
+        topDamage_tower_L,
+    )
 end
