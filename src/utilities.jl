@@ -47,21 +47,23 @@ See ?OWENS.Model and ?OWENSFEA.FEAModel
 See ?OWENS.Unsteady, ?OWENSFEA.Modal
 
 """
-function owens(owensfile,analysisType;
-    delta_t=2e-3,
-    numTS=100,
-    tocp=[0.0,1.1],
-    Omegaocp=[0.0,1.0],
-    OmegaInit=0.0,
-    OmegaGenStart=0.0,
-    usingRotorSpeedFunction=false,
-    nlOn=true,
-    Omega=0.0,
-    turbineStartup=0,
-    spinUpOn=false,
-    numModesToExtract=20,
-    displInitGuess=0.0,
-    airDensity=1.2041,
+function owens(
+    owensfile,
+    analysisType;
+    delta_t = 2e-3,
+    numTS = 100,
+    tocp = [0.0, 1.1],
+    Omegaocp = [0.0, 1.0],
+    OmegaInit = 0.0,
+    OmegaGenStart = 0.0,
+    usingRotorSpeedFunction = false,
+    nlOn = true,
+    Omega = 0.0,
+    turbineStartup = 0,
+    spinUpOn = false,
+    numModesToExtract = 20,
+    displInitGuess = 0.0,
+    airDensity = 1.2041,
     aeroElasticOn = false,        # aeroElastic flags, and air density,
     guessFreq = 0,          #``guess"" modal frequency
     gravityOn = true,             #flag to activate gravity loading in structural dynamics/static simulations,
@@ -80,14 +82,15 @@ function owens(owensfile,analysisType;
     platformActive = false,
     interpOrder = 2,
     platformTurbineConnectionNodeNumber = 1,
-    JgearBox =0.0,
+    JgearBox = 0.0,
     gearRatio = 1.0,             #set gear ratio and efficiency to 1
     gearBoxEfficiency = 1.0,
     useGeneratorFunction = false,
     generatorProps = 0.0,
     driveTrainOn = false,          #set drive shaft unactive
     hydrodynLib = "none",
-    moordynLib = "none")
+    moordynLib = "none",
+)
 
     # if(analysisType=="S") #STATIC ANALYSIS
     #     Omega = varargin{3}            #initialization of rotor speed (Hz)
@@ -103,7 +106,7 @@ function owens(owensfile,analysisType;
 
     if (analysisType=="TNB" || analysisType=="TD") #TRANSIENT ANALYSIS (TNB = newmark beta time integation, TD =  dean time integration)
         if usingRotorSpeedFunction
-            _,OmegaInit,_ = getRotorPosSpeedAccelAtTime(-1.0,0.0,0)
+            _, OmegaInit, _ = getRotorPosSpeedAccelAtTime(-1.0, 0.0, 0)
         else
             #this option uses a discretely specified rotor speed profile
             OmegaInit = Omegaocp[1] #TODO: simplify this downstream since the data doesn't need to be repeated
@@ -173,44 +176,45 @@ function owens(owensfile,analysisType;
     #     error("Analysis type not recognized.")
     # end
 
-    fid = open(owensfile,"r") #reads in inputs file names from .owens file
+    fid = open(owensfile, "r") #reads in inputs file names from .owens file
 
-    last_delimiter   = findall(r"\W", owensfile) #Find the file directory
-    fdirectory       = owensfile[1:last_delimiter[end-1][1]]
+    last_delimiter = findall(r"\W", owensfile) #Find the file directory
+    fdirectory = owensfile[1:last_delimiter[end-1][1]]
 
-    meshfilename     = string(fdirectory, readline(fid)) #mesh file name
-    eldatafilename   = string(fdirectory, readline(fid)) #element data file name
-    ortdatafilename  = string(fdirectory, readline(fid)) #element orientation file name
-    jntdatafilename  = string(fdirectory, readline(fid)) #joint data file name
-    ndldatafilename  = string(fdirectory, readline(fid)) #concentrated nodal data file name
-    bcdatafilename   = string(fdirectory, readline(fid)) #boundary condition file name
-    line             = readline(fid)
-    platformFlag     = real(parse(Int,line[1:2]))
-    platfilename     = string(fdirectory, line[3:end])
+    meshfilename = string(fdirectory, readline(fid)) #mesh file name
+    eldatafilename = string(fdirectory, readline(fid)) #element data file name
+    ortdatafilename = string(fdirectory, readline(fid)) #element orientation file name
+    jntdatafilename = string(fdirectory, readline(fid)) #joint data file name
+    ndldatafilename = string(fdirectory, readline(fid)) #concentrated nodal data file name
+    bcdatafilename = string(fdirectory, readline(fid)) #boundary condition file name
+    line = readline(fid)
+    platformFlag = real(parse(Int, line[1:2]))
+    platfilename = string(fdirectory, line[3:end])
 
     initcondfilename = string(fdirectory, readline(fid)) #initial condition filename
 
-    line             = readline(fid)
-    delimiter_idx    = findall(" ",line)
+    line = readline(fid)
+    delimiter_idx = findall(" ", line)
 
-    aeroLoadsOn      = Bool(real(parse(Int,line[1]))) #flag for activating aerodynamic analysis
+    aeroLoadsOn = Bool(real(parse(Int, line[1]))) #flag for activating aerodynamic analysis
 
-    blddatafilename  = string(fdirectory, line[delimiter_idx[1][1]+1:delimiter_idx[2][1]-1]) #blade data file name
-    aeroloadfile = string(fdirectory, line[delimiter_idx[2][1]+1:end]) #.csv file containing CACTUS aerodynamic loads
+    blddatafilename =
+        string(fdirectory, line[(delimiter_idx[1][1]+1):(delimiter_idx[2][1]-1)]) #blade data file name
+    aeroloadfile = string(fdirectory, line[(delimiter_idx[2][1]+1):end]) #.csv file containing CACTUS aerodynamic loads
     if analysisType!="M"
-        owensfile = string(blddatafilename[1:end-4], ".owens") #TODO: this is redundant and confusing since it is specified at the beginning, clean up
+        owensfile = string(blddatafilename[1:(end-4)], ".owens") #TODO: this is redundant and confusing since it is specified at the beginning, clean up
     end
-    line             = readline(fid) #flag to include drive shaft effects
-    driveShaftFlag   = real(parse(Int,line[1:2]))
+    line = readline(fid) #flag to include drive shaft effects
+    driveShaftFlag = real(parse(Int, line[1:2]))
     driveshaftfilename = string(fdirectory, line[3:end]) #drive shaft file name
 
     generatorfilename = string(fdirectory, readline(fid)) #generator file name
 
     line = readline(fid)
-    delimiter_idx = findall(" ",line)
-    platformActive = Bool(real(parse(Int,line[1]))) #flag for activating hydrodynamic analysis
-    potflowfile  = string(fdirectory, line[delimiter_idx[1][1]+1:delimiter_idx[2][1]-1]) # potential flow file prefix
-    interpOrder = real(parse(Int,line[delimiter_idx[2][1]+1])) # interpolation order for HD/MD libraries
+    delimiter_idx = findall(" ", line)
+    platformActive = Bool(real(parse(Int, line[1]))) #flag for activating hydrodynamic analysis
+    potflowfile = string(fdirectory, line[(delimiter_idx[1][1]+1):(delimiter_idx[2][1]-1)]) # potential flow file prefix
+    interpOrder = real(parse(Int, line[delimiter_idx[2][1]+1])) # interpolation order for HD/MD libraries
     line = readline(fid)
     rayleighDamping = split(line)
 
@@ -218,8 +222,8 @@ function owens(owensfile,analysisType;
         RayleighAlpha = 0.0
         RayleighBeta = 0.0
     else
-        RayleighAlpha = parse(Float64,rayleighDamping[1])
-        RayleighBeta = parse(Float64,rayleighDamping[2])
+        RayleighAlpha = parse(Float64, rayleighDamping[1])
+        RayleighBeta = parse(Float64, rayleighDamping[2])
     end
 
     close(fid) # close .owens file
@@ -227,20 +231,21 @@ function owens(owensfile,analysisType;
     #inputs definitions
     #--------------------------------------------
     mesh = OWENS.readMesh(meshfilename) #read mesh file
-    bladeData,_,_,_ = OWENS.readBladeData(blddatafilename) #reads overall blade data file
-    BC = OWENS.readBCdata(bcdatafilename,mesh.numNodes,numDOFPerNode) #read boundary condition file
-    el = OWENS.readElementData(mesh.numEl,eldatafilename,ortdatafilename,bladeData) #read element data file (also reads orientation and blade data file associated with elements)
-    joint = DelimitedFiles.readdlm(jntdatafilename,'\t',skipstart = 0) #readJointData(jntdatafilename) #read joint data file
-    nodalTerms = OWENSFEA.applyConcentratedTerms(mesh.numNodes, 6;filename=ndldatafilename) #read concentrated nodal terms file
+    bladeData, _, _, _ = OWENS.readBladeData(blddatafilename) #reads overall blade data file
+    BC = OWENS.readBCdata(bcdatafilename, mesh.numNodes, numDOFPerNode) #read boundary condition file
+    el = OWENS.readElementData(mesh.numEl, eldatafilename, ortdatafilename, bladeData) #read element data file (also reads orientation and blade data file associated with elements)
+    joint = DelimitedFiles.readdlm(jntdatafilename, '\t', skipstart = 0) #readJointData(jntdatafilename) #read joint data file
+    nodalTerms =
+        OWENSFEA.applyConcentratedTerms(mesh.numNodes, 6; filename = ndldatafilename) #read concentrated nodal terms file
     initCond = []
 
     #     [inputs] = readDriveShaftProps(inputs,driveShaftFlag,driveshaftfilename) #reads drive shaft properties
 
-    driveShaftProps = DriveShaftProps(0.0,0.0)       #set drive shat properties to 0
+    driveShaftProps = DriveShaftProps(0.0, 0.0)       #set drive shat properties to 0
 
     if (analysisType=="TNB"||analysisType=="TD"||analysisType=="ROM") #for transient analysis...
 
-        if !(occursin("[",generatorfilename)) #If there isn't a file
+        if !(occursin("[", generatorfilename)) #If there isn't a file
             useGeneratorFunction = true
             generatorProps = 0.0
         else
@@ -250,39 +255,76 @@ function owens(owensfile,analysisType;
 
     end
 
-    dataOutputFilename = generateOutputFilename(owensfile,analysisType) #generates an output filename for analysis results #TODO: map to the output location instead of input
-    jointTransform, reducedDOFList = OWENSFEA.createJointTransform(joint,mesh.numNodes,6) #creates a joint transform to constrain inputs degrees of freedom (DOF) consistent with joint constraints
-    numReducedDof = length(jointTransform[1,:])
+    dataOutputFilename = generateOutputFilename(owensfile, analysisType) #generates an output filename for analysis results #TODO: map to the output location instead of input
+    jointTransform, reducedDOFList = OWENSFEA.createJointTransform(joint, mesh.numNodes, 6) #creates a joint transform to constrain inputs degrees of freedom (DOF) consistent with joint constraints
+    numReducedDof = length(jointTransform[1, :])
 
-    nlParams = OWENSFEA.NlParams(iterationType,adaptiveLoadSteppingFlag,tolerance,
-    maxIterations,maxNumLoadSteps,minLoadStepDelta,minLoadStep,prescribedLoadStep)
+    nlParams = OWENSFEA.NlParams(
+        iterationType,
+        adaptiveLoadSteppingFlag,
+        tolerance,
+        maxIterations,
+        maxNumLoadSteps,
+        minLoadStepDelta,
+        minLoadStep,
+        prescribedLoadStep,
+    )
 
-    inputs = Inputs(;analysisType,turbineStartup,usingRotorSpeedFunction,tocp,numTS,delta_t,Omegaocp,
-    aeroLoadsOn,driveTrainOn,generatorOn,platformActive=false,topsideOn=true,interpOrder,hd_input_file=[],md_input_file=[],JgearBox,gearRatio,gearBoxEfficiency,
-    useGeneratorFunction,generatorProps,OmegaGenStart,omegaControl,OmegaInit,
-    aeroloadfile,owensfile,potflowfile=[],dataOutputFilename,bladeData,driveShaftProps)
+    inputs = Inputs(;
+        analysisType,
+        turbineStartup,
+        usingRotorSpeedFunction,
+        tocp,
+        numTS,
+        delta_t,
+        Omegaocp,
+        aeroLoadsOn,
+        driveTrainOn,
+        generatorOn,
+        platformActive = false,
+        topsideOn = true,
+        interpOrder,
+        hd_input_file = [],
+        md_input_file = [],
+        JgearBox,
+        gearRatio,
+        gearBoxEfficiency,
+        useGeneratorFunction,
+        generatorProps,
+        OmegaGenStart,
+        omegaControl,
+        OmegaInit,
+        aeroloadfile,
+        owensfile,
+        potflowfile = [],
+        dataOutputFilename,
+        bladeData,
+        driveShaftProps,
+    )
 
-    feamodel = OWENSFEA.FEAModel(;analysisType,
-    initCond,
-    aeroElasticOn,
-    guessFreq,
-    airDensity,
-    gravityOn,
-    nlOn,
-    spinUpOn,
-    dataOutputFilename,
-    RayleighAlpha,
-    RayleighBeta,
-    elementOrder,
-    joint,
-    platformTurbineConnectionNodeNumber,
-    jointTransform,
-    reducedDOFList,
-    nlParams,
-    numNodes = mesh.numNodes,
-    numModes = numModesToExtract,
-    pBC=BC.pBC,
-    nodalTerms)
+    feamodel = OWENSFEA.FEAModel(;
+        analysisType,
+        initCond,
+        aeroElasticOn,
+        guessFreq,
+        airDensity,
+        gravityOn,
+        nlOn,
+        spinUpOn,
+        dataOutputFilename,
+        RayleighAlpha,
+        RayleighBeta,
+        elementOrder,
+        joint,
+        platformTurbineConnectionNodeNumber,
+        jointTransform,
+        reducedDOFList,
+        nlParams,
+        numNodes = mesh.numNodes,
+        numModes = numModesToExtract,
+        pBC = BC.pBC,
+        nodalTerms,
+    )
 
     #     if(analysisType=="S") #EXECUTE STATIC ANALYSIS
     #         if(length(varargin)<=4 || ~inputs.nlOn)                #sets initial guess for nonlinear calculations
@@ -298,8 +340,36 @@ function owens(owensfile,analysisType;
             displInitGuess = zeros(mesh.numNodes*6)
         end
         OmegaStart = 0.0
-        freq,damp,imagCompSign,U_x_0,U_y_0,U_z_0,theta_x_0,theta_y_0,theta_z_0,U_x_90,U_y_90,U_z_90,theta_x_90,theta_y_90,theta_z_90=Modal(feamodel,mesh,el;displ=displInitGuess,Omega,OmegaStart)
-        return freq,damp,imagCompSign,U_x_0,U_y_0,U_z_0,theta_x_0,theta_y_0,theta_z_0,U_x_90,U_y_90,U_z_90,theta_x_90,theta_y_90,theta_z_90
+        freq,
+        damp,
+        imagCompSign,
+        U_x_0,
+        U_y_0,
+        U_z_0,
+        theta_x_0,
+        theta_y_0,
+        theta_z_0,
+        U_x_90,
+        U_y_90,
+        U_z_90,
+        theta_x_90,
+        theta_y_90,
+        theta_z_90=Modal(feamodel, mesh, el; displ = displInitGuess, Omega, OmegaStart)
+        return freq,
+        damp,
+        imagCompSign,
+        U_x_0,
+        U_y_0,
+        U_z_0,
+        theta_x_0,
+        theta_y_0,
+        theta_z_0,
+        U_x_90,
+        U_y_90,
+        U_z_90,
+        theta_x_90,
+        theta_y_90,
+        theta_z_90
     end
     #
     #     if(analysisType=="FA") #EXECUTE AUTOMATED FLUTTER ANALYSIS
@@ -316,8 +386,8 @@ function owens(owensfile,analysisType;
     end
 
     if (analysisType=="TNB"||analysisType=="TD"||analysisType=="ROM") #EXECUTE TRANSIENT ANALYSIS
-        aeroLoadsFile_root = inputs.aeroloadfile[1:end-16] #cut off the _ElementData.csv
-        OWENSfile_root = inputs.owensfile[1:end-6] #cut off the .owens
+        aeroLoadsFile_root = inputs.aeroloadfile[1:(end-16)] #cut off the _ElementData.csv
+        OWENSfile_root = inputs.owensfile[1:(end-6)] #cut off the .owens
 
         geomFn = string(aeroLoadsFile_root, ".geom")
         loadsFn = string(aeroLoadsFile_root, "_ElementData.csv")
@@ -326,19 +396,81 @@ function owens(owensfile,analysisType;
         ortFn = string(OWENSfile_root, ".ort")
         meshFn = string(OWENSfile_root, ".mesh")
 
-        aerotimeArray,aeroForceValHist,aeroForceDof,cactusGeom = mapCactusLoadsFile(geomFn,loadsFn,bldFn,elFn,ortFn,meshFn)
+        aerotimeArray, aeroForceValHist, aeroForceDof, cactusGeom =
+            mapCactusLoadsFile(geomFn, loadsFn, bldFn, elFn, ortFn, meshFn)
 
-        aeroForces(t,azi) = externalForcing(t+delta_t,aerotimeArray,aeroForceValHist,aeroForceDof)
+        aeroForces(t, azi) =
+            externalForcing(t+delta_t, aerotimeArray, aeroForceValHist, aeroForceDof)
 
-        deformAero(azi;newOmega=-1,newVinf=-1,bld_x=-1,bld_z=-1,bld_twist=-1,accel_flap_in=-1,accel_edge_in=-1,gravity=-1) = 0.0 #placeholder function
-        
-        t, aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,
-        FReactionHist,FTwrBsHist,genTorque,genPower,torqueDriveShaft,uHist,
-        uHist_prp,epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,
-        kappa_y_hist,kappa_z_hist,FPtfmHist,FHydroHist,FMooringHist,
-        topFexternal_hist,rbDataHist = Unsteady(inputs;topModel=feamodel,topMesh=mesh,topEl=el,bin,aero=aeroForces,deformAero)
-            
-        outputData(;mymesh=mesh,inputs,t,aziHist,OmegaHist,OmegaDotHist,gbHist,gbDotHist,gbDotDotHist,FReactionHist,genTorque,genPower,torqueDriveShaft,uHist,uHist_prp,epsilon_x_hist,epsilon_y_hist,epsilon_z_hist,kappa_x_hist,kappa_y_hist,kappa_z_hist)
+        deformAero(
+            azi;
+            newOmega = -1,
+            newVinf = -1,
+            bld_x = -1,
+            bld_z = -1,
+            bld_twist = -1,
+            accel_flap_in = -1,
+            accel_edge_in = -1,
+            gravity = -1,
+        ) = 0.0 #placeholder function
+
+        t,
+        aziHist,
+        OmegaHist,
+        OmegaDotHist,
+        gbHist,
+        gbDotHist,
+        gbDotDotHist,
+        FReactionHist,
+        FTwrBsHist,
+        genTorque,
+        genPower,
+        torqueDriveShaft,
+        uHist,
+        uHist_prp,
+        epsilon_x_hist,
+        epsilon_y_hist,
+        epsilon_z_hist,
+        kappa_x_hist,
+        kappa_y_hist,
+        kappa_z_hist,
+        FPtfmHist,
+        FHydroHist,
+        FMooringHist,
+        topFexternal_hist,
+        rbDataHist = Unsteady(
+            inputs;
+            topModel = feamodel,
+            topMesh = mesh,
+            topEl = el,
+            bin,
+            aero = aeroForces,
+            deformAero,
+        )
+
+        outputData(;
+            mymesh = mesh,
+            inputs,
+            t,
+            aziHist,
+            OmegaHist,
+            OmegaDotHist,
+            gbHist,
+            gbDotHist,
+            gbDotDotHist,
+            FReactionHist,
+            genTorque,
+            genPower,
+            torqueDriveShaft,
+            uHist,
+            uHist_prp,
+            epsilon_x_hist,
+            epsilon_y_hist,
+            epsilon_z_hist,
+            kappa_x_hist,
+            kappa_y_hist,
+            kappa_z_hist,
+        )
 
         return inputs
     end
@@ -355,88 +487,132 @@ Internal, reads cactus .geom file and stores each column in an array within the 
 """
 function readCactusGeom(geom_fn)
 
-    data = DelimitedFiles.readdlm(geom_fn,skipstart = 0)
+    data = DelimitedFiles.readdlm(geom_fn, skipstart = 0)
 
-    NBlade = Int(data[1,2])
-    NStrut = Int(data[2,2])
-    RotN = Float64.(data[3,2:4])
-    RotP = Float64.(data[4,2:4])
-    RefAR = Float64(data[5,2])
-    RefR = Float64(data[6,2])
+    NBlade = Int(data[1, 2])
+    NStrut = Int(data[2, 2])
+    RotN = Float64.(data[3, 2:4])
+    RotP = Float64.(data[4, 2:4])
+    RefAR = Float64(data[5, 2])
+    RefR = Float64(data[6, 2])
 
-    blade = Array{Blade, 1}(undef, NBlade)
+    blade = Array{Blade,1}(undef, NBlade)
 
     idx = 9
     for bld_idx = 1:NBlade
 
-        NElem = Int(data[idx+0,2])
-        FlipN = Int(data[idx+1,2])
-        QCx = Float64.(data[idx+2,2:NElem+2])
-        QCy = Float64.(data[idx+3,2:NElem+2])
-        QCz = Float64.(data[idx+4,2:NElem+2])
-        tx = Float64.(data[idx+5,2:NElem+2])
-        ty = Float64.(data[idx+6,2:NElem+2])
-        tz = Float64.(data[idx+7,2:NElem+2])
-        CtoR = Float64.(data[idx+8,2:NElem+2])
-        PEx = Float64.(data[idx+9,2:NElem+1])
-        PEy = Float64.(data[idx+10,2:NElem+1])
-        PEz = Float64.(data[idx+11,2:NElem+1])
-        tEx = Float64.(data[idx+12,2:NElem+1])
-        tEy = Float64.(data[idx+13,2:NElem+1])
-        tEz = Float64.(data[idx+14,2:NElem+1])
-        nEx = Float64.(data[idx+15,2:NElem+1])
-        nEy = Float64.(data[idx+16,2:NElem+1])
-        nEz = Float64.(data[idx+17,2:NElem+1])
-        sEx = Float64.(data[idx+18,2:NElem+1])
-        sEy = Float64.(data[idx+19,2:NElem+1])
-        sEz = Float64.(data[idx+20,2:NElem+1])
-        ECtoR = Float64.(data[idx+21,2:NElem+1])
-        EAreaR = Float64.(data[idx+22,2:NElem+1])
-        iSect = Float64.(data[idx+23,2:NElem+1])
+        NElem = Int(data[idx+0, 2])
+        FlipN = Int(data[idx+1, 2])
+        QCx = Float64.(data[idx+2, 2:(NElem+2)])
+        QCy = Float64.(data[idx+3, 2:(NElem+2)])
+        QCz = Float64.(data[idx+4, 2:(NElem+2)])
+        tx = Float64.(data[idx+5, 2:(NElem+2)])
+        ty = Float64.(data[idx+6, 2:(NElem+2)])
+        tz = Float64.(data[idx+7, 2:(NElem+2)])
+        CtoR = Float64.(data[idx+8, 2:(NElem+2)])
+        PEx = Float64.(data[idx+9, 2:(NElem+1)])
+        PEy = Float64.(data[idx+10, 2:(NElem+1)])
+        PEz = Float64.(data[idx+11, 2:(NElem+1)])
+        tEx = Float64.(data[idx+12, 2:(NElem+1)])
+        tEy = Float64.(data[idx+13, 2:(NElem+1)])
+        tEz = Float64.(data[idx+14, 2:(NElem+1)])
+        nEx = Float64.(data[idx+15, 2:(NElem+1)])
+        nEy = Float64.(data[idx+16, 2:(NElem+1)])
+        nEz = Float64.(data[idx+17, 2:(NElem+1)])
+        sEx = Float64.(data[idx+18, 2:(NElem+1)])
+        sEy = Float64.(data[idx+19, 2:(NElem+1)])
+        sEz = Float64.(data[idx+20, 2:(NElem+1)])
+        ECtoR = Float64.(data[idx+21, 2:(NElem+1)])
+        EAreaR = Float64.(data[idx+22, 2:(NElem+1)])
+        iSect = Float64.(data[idx+23, 2:(NElem+1)])
         idx += 25
-        blade[bld_idx] = Blade(NElem,FlipN,QCx,QCy,QCz,tx,ty,tz,CtoR,PEx,PEy,PEz,tEx,tEy,tEz,nEx,nEy,nEz,sEx,sEy,sEz,ECtoR,EAreaR,iSect)
+        blade[bld_idx] = Blade(
+            NElem,
+            FlipN,
+            QCx,
+            QCy,
+            QCz,
+            tx,
+            ty,
+            tz,
+            CtoR,
+            PEx,
+            PEy,
+            PEz,
+            tEx,
+            tEy,
+            tEz,
+            nEx,
+            nEy,
+            nEz,
+            sEx,
+            sEy,
+            sEz,
+            ECtoR,
+            EAreaR,
+            iSect,
+        )
     end
 
-    strut = Array{Strut, 1}(undef, NStrut)
+    strut = Array{Strut,1}(undef, NStrut)
 
     for strut_idx = 1:NStrut
 
-        NElem = Int(data[idx+0,2])
-        TtoC = Float64(data[idx+1,2])
-        MCx = Float64.(data[idx+2,2:NElem+2])
-        MCy = Float64.(data[idx+3,2:NElem+2])
-        MCz = Float64.(data[idx+4,2:NElem+2])
-        CtoR = Float64.(data[idx+5,2:NElem+2])
-        PEx = Float64.(data[idx+6,2:NElem+1])
-        PEy = Float64.(data[idx+7,2:NElem+1])
-        PEz = Float64.(data[idx+8,2:NElem+1])
-        sEx = Float64.(data[idx+9,2:NElem+1])
-        sEy = Float64.(data[idx+10,2:NElem+1])
-        sEz = Float64.(data[idx+11,2:NElem+1])
-        ECtoR = Float64.(data[idx+12,2:NElem+1])
-        EAreaR = Float64.(data[idx+13,2:NElem+1])
-        BIndS = Int(data[idx+14,2])
-        EIndS = Int(data[idx+15,2])
-        BIndE = Int(data[idx+16,2])
-        EIndE = Int(data[idx+17,2])
+        NElem = Int(data[idx+0, 2])
+        TtoC = Float64(data[idx+1, 2])
+        MCx = Float64.(data[idx+2, 2:(NElem+2)])
+        MCy = Float64.(data[idx+3, 2:(NElem+2)])
+        MCz = Float64.(data[idx+4, 2:(NElem+2)])
+        CtoR = Float64.(data[idx+5, 2:(NElem+2)])
+        PEx = Float64.(data[idx+6, 2:(NElem+1)])
+        PEy = Float64.(data[idx+7, 2:(NElem+1)])
+        PEz = Float64.(data[idx+8, 2:(NElem+1)])
+        sEx = Float64.(data[idx+9, 2:(NElem+1)])
+        sEy = Float64.(data[idx+10, 2:(NElem+1)])
+        sEz = Float64.(data[idx+11, 2:(NElem+1)])
+        ECtoR = Float64.(data[idx+12, 2:(NElem+1)])
+        EAreaR = Float64.(data[idx+13, 2:(NElem+1)])
+        BIndS = Int(data[idx+14, 2])
+        EIndS = Int(data[idx+15, 2])
+        BIndE = Int(data[idx+16, 2])
+        EIndE = Int(data[idx+17, 2])
 
         idx += 19
-        strut[strut_idx] = Strut(NElem,TtoC,MCx,MCy,MCz,CtoR,PEx,PEy,PEz,sEx,sEy,sEz,ECtoR,EAreaR,BIndS,EIndS,BIndE,EIndE)
+        strut[strut_idx] = Strut(
+            NElem,
+            TtoC,
+            MCx,
+            MCy,
+            MCz,
+            CtoR,
+            PEx,
+            PEy,
+            PEz,
+            sEx,
+            sEy,
+            sEz,
+            ECtoR,
+            EAreaR,
+            BIndS,
+            EIndS,
+            BIndE,
+            EIndE,
+        )
     end
 
-    return CactusGeom(NBlade,NStrut,RotN,RotP,RefAR,RefR,blade,strut)
+    return CactusGeom(NBlade, NStrut, RotN, RotP, RefAR, RefR, blade, strut)
 end
 
 """
 Internal, takes cactus loads and geometry and OWENS mesh and maps the loads to the blades' FEA dofs
 """
-function mapCactusLoadsFile(geomFn,loadsFn,bldFn,elFn,ortFn,meshFn)
+function mapCactusLoadsFile(geomFn, loadsFn, bldFn, elFn, ortFn, meshFn)
 
     cactusGeom = readCactusGeom(geomFn)
     blade = cactusGeom.blade
 
     # aero_data = importCactusFile(loadsFn,1,2002,22,',')
-    aero_data = DelimitedFiles.readdlm(loadsFn,',',skipstart = 1)
+    aero_data = DelimitedFiles.readdlm(loadsFn, ',', skipstart = 1)
     #define these from params file
     ft2m = 1 / 3.281
     rho = 1.225
@@ -445,117 +621,159 @@ function mapCactusLoadsFile(geomFn,loadsFn,bldFn,elFn,ortFn,meshFn)
     V = 25.0#6.787243728 #m/s #27.148993200000003
     println("Velocity for the cacus test case is hardcoded here at $V")
 
-    normTime = aero_data[:,1]
+    normTime = aero_data[:, 1]
 
     numAeroEl = 0
-    for i=1:cactusGeom.NBlade
+    for i = 1:cactusGeom.NBlade
         numAeroEl = numAeroEl + cactusGeom.blade[i].NElem
     end
 
-    len,_ = size(aero_data)
+    len, _ = size(aero_data)
 
     numAeroTS = Int(len/numAeroEl)
     # time = zeros(len/numAeroEl,1)
-    time = normTime[1:Int(numAeroEl):end,1].*RefR[1]./V[1]
+    time = normTime[1:Int(numAeroEl):end, 1] .* RefR[1] ./ V[1]
 
-    urel = aero_data[:,15]
-    uloc = urel.*V
+    urel = aero_data[:, 15]
+    uloc = urel .* V
 
-    cn = aero_data[:,24]
-    ct = aero_data[:,25]
-    cm25 = aero_data[:,22]
+    cn = aero_data[:, 24]
+    ct = aero_data[:, 25]
+    cm25 = aero_data[:, 22]
 
     NperSpan = zeros(len)
     TperSpan = zeros(len)
     M25perSpan = zeros(len)
     Mecc = zeros(len)
 
-    for i=1:len
+    for i = 1:len
 
-        NperSpan[i] =  cn[i]  * 0.5*rho*uloc[i]^2*(blade[Int(aero_data[i,3])].ECtoR[Int(aero_data[i,4])]*RefR)
-        TperSpan[i] =  ct[i]  * 0.5*rho*uloc[i]^2*(blade[Int(aero_data[i,3])].ECtoR[Int(aero_data[i,4])]*RefR)
-        M25perSpan[i] = cm25[i] * 0.5*rho*uloc[i]^2*(blade[Int(aero_data[i,3])].ECtoR[Int(aero_data[i,4])]*RefR)*blade[Int(aero_data[i,3])].ECtoR[Int(aero_data[i,4])]*RefR
+        NperSpan[i] =
+            cn[i] *
+            0.5 *
+            rho *
+            uloc[i]^2 *
+            (blade[Int(aero_data[i, 3])].ECtoR[Int(aero_data[i, 4])]*RefR)
+        TperSpan[i] =
+            ct[i] *
+            0.5 *
+            rho *
+            uloc[i]^2 *
+            (blade[Int(aero_data[i, 3])].ECtoR[Int(aero_data[i, 4])]*RefR)
+        M25perSpan[i] =
+            cm25[i] *
+            0.5 *
+            rho *
+            uloc[i]^2 *
+            (blade[Int(aero_data[i, 3])].ECtoR[Int(aero_data[i, 4])]*RefR) *
+            blade[Int(aero_data[i, 3])].ECtoR[Int(aero_data[i, 4])] *
+            RefR
         momentArm = 0.0
         Mecc[i] = NperSpan[i] * momentArm
     end
 
     # Initialize bladeForces
-    N = zeros(cactusGeom.NBlade,numAeroTS,blade[1].NElem)
-    T = zeros(cactusGeom.NBlade,numAeroTS,blade[1].NElem)
-    M25 = zeros(cactusGeom.NBlade,numAeroTS,blade[1].NElem)
+    N = zeros(cactusGeom.NBlade, numAeroTS, blade[1].NElem)
+    T = zeros(cactusGeom.NBlade, numAeroTS, blade[1].NElem)
+    M25 = zeros(cactusGeom.NBlade, numAeroTS, blade[1].NElem)
 
     index = 1
-    for i=1:numAeroTS
-        for j=1:cactusGeom.NBlade
-            for k=1:blade[j].NElem
-                N[j,i,k] = NperSpan[index]
-                T[j,i,k] = TperSpan[index]
-                M25[j,i,k] = M25perSpan[index]
+    for i = 1:numAeroTS
+        for j = 1:cactusGeom.NBlade
+            for k = 1:blade[j].NElem
+                N[j, i, k] = NperSpan[index]
+                T[j, i, k] = TperSpan[index]
+                M25[j, i, k] = M25perSpan[index]
                 index = index + 1
             end
         end
     end
 
-    spanLocNorm = zeros(cactusGeom.NBlade,blade[1].NElem)
-    for i=1:cactusGeom.NBlade
-        spanLocNorm[i,:] = blade[i].PEy[1:blade[1].NElem[1,1],1].*RefR[1,1]/(blade[i].QCy[blade[1].NElem[1,1]+1,1]*RefR[1,1])
+    spanLocNorm = zeros(cactusGeom.NBlade, blade[1].NElem)
+    for i = 1:cactusGeom.NBlade
+        spanLocNorm[i, :] =
+            blade[i].PEy[1:blade[1].NElem[1, 1], 1] .*
+            RefR[1, 1]/(blade[i].QCy[blade[1].NElem[1, 1]+1, 1]*RefR[1, 1])
     end
 
-    bladeData,structuralSpanLocNorm,structuralNodeNumbers,structuralElNumbers = OWENS.readBladeData(bldFn)
+    bladeData, structuralSpanLocNorm, structuralNodeNumbers, structuralElNumbers =
+        OWENS.readBladeData(bldFn)
 
     #Initialize structuralLoad
-    struct_N = zeros(cactusGeom.NBlade,numAeroTS,length(structuralElNumbers[1,:]))
-    struct_T = zeros(cactusGeom.NBlade,numAeroTS,length(structuralElNumbers[1,:]))
-    struct_M25 = zeros(cactusGeom.NBlade,numAeroTS,length(structuralElNumbers[1,:]))
+    struct_N = zeros(cactusGeom.NBlade, numAeroTS, length(structuralElNumbers[1, :]))
+    struct_T = zeros(cactusGeom.NBlade, numAeroTS, length(structuralElNumbers[1, :]))
+    struct_M25 = zeros(cactusGeom.NBlade, numAeroTS, length(structuralElNumbers[1, :]))
 
     # TODO: the interpolation input here is blade height vs blade span length, should be updated to be consistent
-    for i=1:cactusGeom.NBlade
-        for j=1:numAeroTS
-            struct_N[i,j,:] = FLOWMath.linear(spanLocNorm[i,:],N[i,j,:],structuralSpanLocNorm[i,:])
-            struct_T[i,j,:] = FLOWMath.linear(spanLocNorm[i,:],T[i,j,:],structuralSpanLocNorm[i,:])
-            struct_M25[i,j,:] = FLOWMath.linear(spanLocNorm[i,:],M25[i,j,:],structuralSpanLocNorm[i,:])
+    for i = 1:cactusGeom.NBlade
+        for j = 1:numAeroTS
+            struct_N[i, j, :] =
+                FLOWMath.linear(spanLocNorm[i, :], N[i, j, :], structuralSpanLocNorm[i, :])
+            struct_T[i, j, :] =
+                FLOWMath.linear(spanLocNorm[i, :], T[i, j, :], structuralSpanLocNorm[i, :])
+            struct_M25[i, j, :] = FLOWMath.linear(
+                spanLocNorm[i, :],
+                M25[i, j, :],
+                structuralSpanLocNorm[i, :],
+            )
         end
     end
 
-    _,numNodesPerBlade = size(structuralNodeNumbers)
+    _, numNodesPerBlade = size(structuralNodeNumbers)
 
     #integrate over elements
 
     #read element aero_data in
     mesh = OWENS.readMesh(meshFn)
-    el = OWENS.readElementData(mesh.numEl,elFn,ortFn,bladeData)
+    el = OWENS.readElementData(mesh.numEl, elFn, ortFn, bladeData)
     numDOFPerNode = 6
     #     [~,~,timeLen] = size(aeroDistLoadsArrayTime)
-    Fg = zeros(mesh.numNodes*6,numAeroTS)
-    for i=1:numAeroTS
+    Fg = zeros(mesh.numNodes*6, numAeroTS)
+    for i = 1:numAeroTS
         for j = 1:cactusGeom.NBlade
-            for k = 1:numNodesPerBlade-1
+            for k = 1:(numNodesPerBlade-1)
                 #get element aero_data
                 # orientation angle,xloc,sectionProps,element order]
-                elNum = Int(structuralElNumbers[j,k])
+                elNum = Int(structuralElNumbers[j, k])
                 #get dof map
-                node1 = Int(structuralNodeNumbers[j,k])
-                node2 = Int(structuralNodeNumbers[j,k+1])
-                dofList = [(node1-1)*numDOFPerNode.+(1:6) (node2-1)*numDOFPerNode.+(1:6)]
+                node1 = Int(structuralNodeNumbers[j, k])
+                node2 = Int(structuralNodeNumbers[j, k+1])
+                dofList =
+                    [(node1-1)*numDOFPerNode .+ (1:6) (node2-1)*numDOFPerNode .+ (1:6)]
 
                 elementOrder = 1
                 x = [mesh.x[node1], mesh.x[node2]]
-                elLength = sqrt((mesh.x[node2]-mesh.x[node1])^2 + (mesh.y[node2]-mesh.y[node1])^2 + (mesh.z[node2]-mesh.z[node1])^2)
+                elLength = sqrt(
+                    (mesh.x[node2]-mesh.x[node1])^2 +
+                    (mesh.y[node2]-mesh.y[node1])^2 +
+                    (mesh.z[node2]-mesh.z[node1])^2,
+                )
                 xloc = [0 elLength]
                 twist = el.props[elNum].twist
                 sweepAngle = el.psi[elNum]
                 coneAngle = el.theta[elNum]
                 rollAngle = el.roll[elNum]
 
-                extDistF2Node =  [struct_T[j,i,k]    struct_T[j,i,k+1]]
-                extDistF3Node = -[struct_N[j,i,k]    struct_N[j,i,k+1]]
-                extDistF4Node = -[struct_M25[j,i,k]  struct_M25[j,i,k+1]]
+                extDistF2Node = [struct_T[j, i, k] struct_T[j, i, k+1]]
+                extDistF3Node = -[struct_N[j, i, k] struct_N[j, i, k+1]]
+                extDistF4Node = -[struct_M25[j, i, k] struct_M25[j, i, k+1]]
 
-                Fe = OWENSFEA.calculateLoadVecFromDistForce(elementOrder,x,xloc,twist,sweepAngle,coneAngle,rollAngle,extDistF2Node,extDistF3Node,extDistF4Node)
+                Fe = OWENSFEA.calculateLoadVecFromDistForce(
+                    elementOrder,
+                    x,
+                    xloc,
+                    twist,
+                    sweepAngle,
+                    coneAngle,
+                    rollAngle,
+                    extDistF2Node,
+                    extDistF3Node,
+                    extDistF4Node,
+                )
 
                 #asssembly
                 for m = 1:length(dofList)
-                    Fg[dofList[m],i] =  Fg[dofList[m],i]+Fe[m]
+                    Fg[dofList[m], i] = Fg[dofList[m], i]+Fe[m]
                 end
 
             end
@@ -567,34 +785,34 @@ function mapCactusLoadsFile(geomFn,loadsFn,bldFn,elFn,ortFn,meshFn)
     #history
     # ForceValHist = zeros(sum(Fg[:,1].!=0),length(Fg[1,:]))
     # ForceDof = zeros(sum(Fg[:,1].!=0),1)
-    ForceValHist = zeros(length(Fg[:,1]),length(Fg[1,:]))
-    ForceDof = zeros(length(Fg[:,1]),1)
+    ForceValHist = zeros(length(Fg[:, 1]), length(Fg[1, :]))
+    ForceDof = zeros(length(Fg[:, 1]), 1)
     index = 1
-    for i=1:Int(mesh.numNodes*6)
+    for i = 1:Int(mesh.numNodes*6)
         # if !isempty(findall(x->x!=0,Fg[i,:]))
 
-            ForceValHist[index,:] = Fg[i,:]
-            ForceDof[index] = i
-            index = index + 1
+        ForceValHist[index, :] = Fg[i, :]
+        ForceDof[index] = i
+        index = index + 1
         # end
     end
-    return time,ForceValHist,ForceDof,cactusGeom
+    return time, ForceValHist, ForceDof, cactusGeom
 end
 
 """
 Internal, generates an output file name depending on the analysis type
 """
-function generateOutputFilename(owensfilename,analysisType)
+function generateOutputFilename(owensfilename, analysisType)
 
     #find the last "." in owensfilename - helps to extract the prefix in the .owens
-    index = findlast(".",owensfilename)[1]
+    index = findlast(".", owensfilename)[1]
 
     if (analysisType=="M"||analysisType=="F"||analysisType=="FA") #output filename (*.out) for modal/flutter analysis
-        outputfilename = string(owensfilename[1:index-1],".out")
+        outputfilename = string(owensfilename[1:(index-1)], ".out")
     elseif (analysisType=="S") #output file name (*_static.mat) for static analysis
-        outputfilename = string(owensfilename[1:index-1],"_static.mat")
+        outputfilename = string(owensfilename[1:(index-1)], "_static.mat")
     elseif (analysisType=="TNB"||analysisType=="TD"||analysisType=="ROM") #output filename (*.mat) for transient analysis
-        outputfilename = string(owensfilename[1:index-1],".mat")
+        outputfilename = string(owensfilename[1:(index-1)], ".mat")
     end
 
     return outputfilename
@@ -614,13 +832,13 @@ Caclulates generator torque for simple induction generator
 #Output
 * `genTorque::float`      generator torque
 """
-function simpleGenerator(inputs,genSpeed)
+function simpleGenerator(inputs, genSpeed)
 
     #assign generator properties form inputs object
-    ratedTorque        = inputs.ratedTorque;
-    ratedGenSlipPerc   = inputs.ratedGenSlipPerc;
+    ratedTorque = inputs.ratedTorque;
+    ratedGenSlipPerc = inputs.ratedGenSlipPerc;
     zeroTorqueGenSpeed = inputs.zeroTorqueGenSpeed;
-    pulloutRatio       = inputs.pulloutRatio;
+    pulloutRatio = inputs.pulloutRatio;
 
     #calculate rated generator speed
     ratedGenSpeed = zeroTorqueGenSpeed*(1.0 + 0.01*ratedGenSlipPerc);
@@ -629,7 +847,7 @@ function simpleGenerator(inputs,genSpeed)
     midSlope = (ratedTorque/(ratedGenSpeed-zeroTorqueGenSpeed));
 
     #calculate lower and upper torque limits of generator
-    upperTorqueLimit =ratedTorque*pulloutRatio;
+    upperTorqueLimit = ratedTorque*pulloutRatio;
     lowerTorqueLimit = -upperTorqueLimit;
 
     #calculate upper and lower generator speeds at which linear torque vs. speed region begins/ends
@@ -672,8 +890,12 @@ function createInitCondArray(initDisps, numNodes, numDOFPerNode)
         initCond = zeros(numNodes*numDOFPerNode, 3)
         for i = 1:length(initDisps)
             if initDisps[i] != 0.0
-                dof_initCond = hcat(collect(1:numNodes), ones(Int,numNodes)*i, ones(numNodes)*initDisps[i])
-                initCond[(i-1)*numNodes+1:i*numNodes,:] = dof_initCond
+                dof_initCond = hcat(
+                    collect(1:numNodes),
+                    ones(Int, numNodes)*i,
+                    ones(numNodes)*initDisps[i],
+                )
+                initCond[((i-1)*numNodes+1):(i*numNodes), :] = dof_initCond
             end
         end
         initCond = initCond[vec(mapslices(col -> any(col .!= 0), initCond, dims = 2)), :] #removes rows of all zeros
@@ -688,13 +910,23 @@ function setBCs(fixedDOFs, fixedNodes, numNodes, numDOFPerNode) #node, dof, bc
     else
         pBC = zeros(Int, numNodes*numDOFPerNode, 3)
         for i = 1:length(fixedNodes)
-            pBC[(i-1)*numDOFPerNode+1:i*numDOFPerNode, :] = hcat(ones(numDOFPerNode)*fixedNodes[i], collect(1:numDOFPerNode), zeros(Int, numDOFPerNode) )
+            pBC[((i-1)*numDOFPerNode+1):(i*numDOFPerNode), :] = hcat(
+                ones(numDOFPerNode)*fixedNodes[i],
+                collect(1:numDOFPerNode),
+                zeros(Int, numDOFPerNode),
+            )
         end
         for i = 1:length(fixedDOFs)
             newNodes = setdiff(1:numNodes, fixedNodes) # this avoids duplicating nodes already counted for by fixedNodes
             numNewNodes = length(newNodes)
-            dofBCs = hcat(newNodes, ones(Int,numNewNodes)*fixedDOFs[i], zeros(Int,numNewNodes))
-            pBC[length(fixedNodes)*numDOFPerNode+(i-1)*numNewNodes+1:length(fixedNodes)*numDOFPerNode+i*numNewNodes, :] = dofBCs
+            dofBCs =
+                hcat(newNodes, ones(Int, numNewNodes)*fixedDOFs[i], zeros(Int, numNewNodes))
+            pBC[
+                (length(fixedNodes)*numDOFPerNode+(i-1)*numNewNodes+1):(length(
+                    fixedNodes,
+                )*numDOFPerNode+i*numNewNodes),
+                :,
+            ] = dofBCs
         end
         pBC = pBC[vec(mapslices(col -> any(col .!= 0), pBC, dims = 2)), :] #removes extra rows (i.e. rows of all zeros)
     end
@@ -769,8 +1001,9 @@ end
 #     return plystress
 # end #stress_calc
 
-function safeakima(x,y,xpt;extrapolate=false)
-    if minimum(xpt)<(minimum(x)-abs(minimum(x))*0.1) || maximum(xpt)>(maximum(x)+abs(maximum(x))*0.1)
+function safeakima(x, y, xpt; extrapolate = false)
+    if minimum(xpt)<(minimum(x)-abs(minimum(x))*0.1) ||
+       maximum(xpt)>(maximum(x)+abs(maximum(x))*0.1)
         msg="Extrapolating on akima spline results in undefined solutions minimum(xpt)<minimum(x) $(minimum(xpt))<$(minimum(x)) or maximum(xpt)>maximum(x) $(maximum(xpt))>$(maximum(x))"
         if !extrapolate
             throw(OverflowError(msg))
@@ -778,5 +1011,5 @@ function safeakima(x,y,xpt;extrapolate=false)
             @warn msg
         end
     end
-    return FLOWMath.akima(x,y,xpt)
+    return FLOWMath.akima(x, y, xpt)
 end
