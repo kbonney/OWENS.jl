@@ -1,4 +1,3 @@
-
 # Output Structs
 struct BladeProperties
     numadIn_bld::NuMad  # Blade geometry from NuMad
@@ -30,7 +29,7 @@ struct MeshProperties
     myjoint::Array{float}#OWENSFEA.FEAModel.joint
     AD15bldNdIdxRng::Matrix{Int}  # Blade node index range for AeroDyn
     AD15bldElIdxRng::Matrix{Int}  # Blade element index range for AeroDyn
-    custom_mesh_props::Vector{Any}  # Any custom mesh outputs
+    custom_mesh_outputs::Vector{Any}  # Any custom mesh outputs
 end
 
 struct AeroProperties
@@ -44,12 +43,21 @@ struct AeroProperties
     airfoil_filenames::Union{Vector{String},Nothing}  # Array of airfoil file paths
 end
 
+# struct SectionalProperties
+#     myel::Any #OWENSFEA.El  # Element object
+#     system::Any # OWENSFEA.System  # System object
+#     assembly::Any # OWENSFEA.Assembly  # Assembly object
+#     sections::Any # Vector{OWENSFEA.Section}  # Vector of section objects
+# end
+
+# TODO add types
 struct SectionalProperties
-    myel::Any #OWENSFEA.El  # Element object
-    system::Any # OWENSFEA.System  # System object
-    assembly::Any # OWENSFEA.Assembly  # Assembly object
-    sections::Any # Vector{OWENSFEA.Section}  # Vector of section objects
-end
+    sectionPropsArray::Any
+    stiff_array::Any
+    mass_array::Any
+    rotationalEffects::Any
+    end
+
 
 struct StrutProperties
     numadIn_bld::NuMad  # Blade geometry from NuMad
@@ -198,89 +206,107 @@ function default_aero_config()
 end
 
 
+
+
 # Component setup functions
 function setup_mesh(
     mesh_config::MeshConfig,
     blade_config::BladeConfig,
     tower_config::TowerConfig,
 )
-    validate_mesh_type(mesh_config.meshtype)
-
-    if mesh_config.meshtype == "ARCUS" && mesh_config.custommesh === nothing
-        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_props =
-            OWENS.create_arcus_mesh(;
-                Htwr_base = tower_config.Htwr_base,
-                Hbld = blade_config.H,
-                R = blade_config.R,
-                nblade = blade_config.B,
-                ntelem = mesh_config.ntelem,
-                nbelem = mesh_config.nbelem,
-                ncelem = mesh_config.ncelem,
-                c_mount_ratio = tower_config.c_mount_ratio,
-                bshapex = blade_config.shapeX,
-                bshapez = blade_config.shapeZ,
-                AD15_ccw = mesh_config.AD15_ccw,
-                joint_type = tower_config.joint_type,
-                cables_connected_to_blade_base = false,
-                angularOffset = tower_config.angularOffset,
-            ),
-            [];
-    elseif (mesh_config.meshtype == "Darrieus" || mesh_config.meshtype == "H-VAWT") &&
-           mesh_config.custommesh === nothing
-        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_props =
-            OWENS.create_mesh_struts(;
-                Htwr_base = tower_config.Htwr_base,
-                Htwr_blds = tower_config.Htwr_blds,
-                Hbld = blade_config.H,
-                R = blade_config.R,
-                AD15hubR = 0.1,  # TODO: Make this configurable
-                nblade = blade_config.B,
-                ntelem = mesh_config.ntelem,
-                nbelem = mesh_config.nbelem,
-                nselem = mesh_config.nselem,
-                strut_twr_mountpoint = tower_config.strut_twr_mountpoint,
-                strut_bld_mountpoint = tower_config.strut_bld_mountpoint,
-                bshapex = blade_config.shapeX,
-                bshapez = blade_config.shapeZ,
-                bshapey = blade_config.shapeY,
-                angularOffset = tower_config.angularOffset,
-                AD15_ccw = mesh_config.AD15_ccw,
-                verbosity = mesh_config.verbosity,
-                connectBldTips2Twr = mesh_config.connectBldTips2Twr,
-            ),
-            [];
-    elseif mesh_config.custommesh !== nothing
-        mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_props =
-            mesh_config.custommesh(;
-                Htwr_base = tower_config.Htwr_base,
-                Htwr_blds = tower_config.Htwr_blds,
-                Hbld = blade_config.H,
-                R = blade_config.R,
-                AD15hubR = 0.1,  # TODO: Make this configurable
-                nblade = blade_config.B,
-                ntelem = mesh_config.ntelem,
-                nbelem = mesh_config.nbelem,
-                nselem = mesh_config.nselem,
-                strut_twr_mountpoint = tower_config.strut_twr_mountpoint,
-                strut_bld_mountpoint = tower_config.strut_bld_mountpoint,
-                bshapex = blade_config.shapeX,
-                bshapez = blade_config.shapeZ,
-                bshapey = blade_config.shapeY,
-                angularOffset = tower_config.angularOffset,
-                AD15_ccw = mesh_config.AD15_ccw,
-                verbosity = mesh_config.verbosity,
+    mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs =
+        OWENS.create_mesh_struts(;
+            Htwr_base = tower_config.Htwr_base,
+            Htwr_blds = tower_config.Htwr_blds,
+            Hbld = blade_config.H,
+            R = blade_config.R,
+            AD15hubR = 0.1,  # TODO: Make this configurable
+            nblade = blade_config.B,
+            ntelem = mesh_config.ntelem,
+            nbelem = mesh_config.nbelem,
+            nselem = mesh_config.nselem,
+            strut_twr_mountpoint = tower_config.strut_twr_mountpoint,
+            strut_bld_mountpoint = tower_config.strut_bld_mountpoint,
+            bshapex = blade_config.shapeX,
+            bshapez = blade_config.shapeZ,
+            bshapey = blade_config.shapeY,
+            angularOffset = tower_config.angularOffset,
+            AD15_ccw = mesh_config.AD15_ccw,
+            verbosity = mesh_config.verbosity,
+            connectBldTips2Twr = mesh_config.connectBldTips2Twr,
             )
-    else
-        error("Invalid mesh configuration")
-    end
     return MeshProperties(
         mymesh = mymesh,
         myort = myort,
         myjoint = myjoint,
         AD15bldNdIdxRng = AD15bldNdIdxRng,
         AD15bldElIdxRng = AD15bldElIdxRng,
-        custom_mesh_props = custom_mesh_props,
+        custom_mesh_outputs = custom_mesh_outputs,
     )
+end
+
+function setup_sectional_props()
+    sectionPropsArray = []
+    stiff_array = []
+    mass_array = []
+    rotationalEffects = ones(mymesh.numEl)
+
+    for icomponent = 1:size(components)[1]
+        if contains(components[icomponent].name, "tower")
+            components[icomponent].input_layup = NuMad_geom_xlscsv_file_twr
+            components[icomponent].input_materials = NuMad_mat_xlscsv_file_twr
+        elseif contains(components[icomponent].name, "blade")
+            components[icomponent].input_layup = NuMad_geom_xlscsv_file_bld
+            components[icomponent].input_materials = NuMad_mat_xlscsv_file_bld
+        elseif contains(components[icomponent].name, "strut")
+            istrut = parse(Int, components[icomponent].name[end]) #This assumes that you have a numad file for each strut, and that you have 9 or fewer struts
+            components[icomponent].input_layup = NuMad_geom_xlscsv_file_strut[istrut]
+            components[icomponent].input_materials = NuMad_mat_xlscsv_file_strut
+        elseif contains(components[icomponent].name, "intra_cable")
+            components[icomponent].input_layup = NuMad_geom_xlscsv_file_intra_blade_cable
+            components[icomponent].input_materials = NuMad_mat_xlscsv_file_intra_blade_cable
+        elseif contains(components[icomponent].name, "guy")
+            components[icomponent].input_layup = NuMad_geom_xlscsv_file_guys
+            components[icomponent].input_materials = NuMad_mat_xlscsv_file_guys
+            rotationalEffects[components[icomponent].elNumbers] .= 0.0 #turn rotational effects off for guy wires
+        end
+
+        if verbosity>1
+            println(
+                "Calculating Sectional Properties for Component $icomponent $(components[icomponent].name)",
+            )
+        elseif verbosity>2
+            println(
+                "Using for the layup, $(components[icomponent].input_layup) and for the materials, $(components[icomponent].input_materials)",
+            )
+        end
+
+        sectionPropsArray, stiff_array, mass_array, components[icomponent] =
+            addSectionalPropertiesComponent!(
+                sectionPropsArray,
+                stiff_array,
+                mass_array,
+                components[icomponent],
+                path,
+                rho,
+                AddedMass_Coeff_Ca;
+                name = nothing,
+            )
+
+        components[icomponent].mass = OWENS.get_material_mass(
+            components[icomponent].plyProps,
+            components[icomponent].nuMadIn,
+        )
+        components[icomponent].cost = [
+            "$name $(components[icomponent].mass[i]) kg, $(components[icomponent].plyProps.costs[i]) \$/kg: \$$(components[icomponent].mass[i]*components[icomponent].plyProps.costs[i])"
+            for (i, name) in enumerate(components[icomponent].plyProps.names)
+        ]
+    end
+    return SectionalProperties(
+        sectionPropsArray,
+        stiff_array,
+        mass_array,
+        rotationalEffects)
 end
 
 function setup_blade(
@@ -1252,10 +1278,7 @@ function create_default_material_properites()
     return OWENS.plyproperties(names, plies)
 end
 
-
-
-
-function addSectionalPropertiesComponent(
+function addSectionalPropertiesComponent!(
     sectionPropsArray,
     stiff_array,
     mass_array,
@@ -1469,32 +1492,8 @@ function setupOWENS(
     #########################################
     ### Set up mesh
     #########################################
+    mesh_props = setup_mesh(mesh_config, blade_config, tower_config)
 
-    # if isnothing(custommesh)
-    #     error("this function requires a custom mesh be input")
-    # end
-
-    mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs =
-        create_mesh_struts(;
-            Htwr_base,
-            Htwr_blds,
-            Hbld = H, #blade height
-            R, # m bade radius
-            AD15hubR, #TODO: hook up with AD15 file generation
-            nblade = Nbld,
-            ntelem, #tower elements
-            nbelem, #blade elements
-            nselem,
-            strut_twr_mountpoint,
-            strut_bld_mountpoint,
-            bshapex = shapeX, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-            bshapez = shapeZ,
-            bshapey = shapeY, # but magnitude for this is relevant
-            angularOffset, #Blade shape, magnitude is irrelevant, scaled based on height and radius above
-            AD15_ccw = true,
-            verbosity, # 0 nothing, 1 basic, 2 lots: amount of printed information)
-            connectBldTips2Twr,
-        )
 
     nTwrElem = Int(mymesh.meshSeg[1])+1
     # try
@@ -1531,69 +1530,15 @@ function setupOWENS(
     intra_blade_cable_startidx_el,
     intra_blade_cable_endidx_el,
     topel_idx,
-    s2b_idx = custom_mesh_outputs
+    s2b_idx = mesh_props.custom_mesh_outputs
 
     # This is where the sectional properties for the tower are either read in from the file, or are directly input and could be manuplated here in the script
 
     #########################################
     ### Set up Sectional Properties
     #########################################
-    sectionPropsArray = []
-    stiff_array = []
-    mass_array = []
-    rotationalEffects = ones(mymesh.numEl)
 
-    for icomponent = 1:size(components)[1]
-        if contains(components[icomponent].name, "tower")
-            components[icomponent].input_layup = NuMad_geom_xlscsv_file_twr
-            components[icomponent].input_materials = NuMad_mat_xlscsv_file_twr
-        elseif contains(components[icomponent].name, "blade")
-            components[icomponent].input_layup = NuMad_geom_xlscsv_file_bld
-            components[icomponent].input_materials = NuMad_mat_xlscsv_file_bld
-        elseif contains(components[icomponent].name, "strut")
-            istrut = parse(Int, components[icomponent].name[end]) #This assumes that you have a numad file for each strut, and that you have 9 or fewer struts
-            components[icomponent].input_layup = NuMad_geom_xlscsv_file_strut[istrut]
-            components[icomponent].input_materials = NuMad_mat_xlscsv_file_strut
-        elseif contains(components[icomponent].name, "intra_cable")
-            components[icomponent].input_layup = NuMad_geom_xlscsv_file_intra_blade_cable
-            components[icomponent].input_materials = NuMad_mat_xlscsv_file_intra_blade_cable
-        elseif contains(components[icomponent].name, "guy")
-            components[icomponent].input_layup = NuMad_geom_xlscsv_file_guys
-            components[icomponent].input_materials = NuMad_mat_xlscsv_file_guys
-            rotationalEffects[components[icomponent].elNumbers] .= 0.0 #turn rotational effects off for guy wires
-        end
-
-        if verbosity>1
-            println(
-                "Calculating Sectional Properties for Component $icomponent $(components[icomponent].name)",
-            )
-        elseif verbosity>2
-            println(
-                "Using for the layup, $(components[icomponent].input_layup) and for the materials, $(components[icomponent].input_materials)",
-            )
-        end
-
-        sectionPropsArray, stiff_array, mass_array, components[icomponent] =
-            addSectionalPropertiesComponent(
-                sectionPropsArray,
-                stiff_array,
-                mass_array,
-                components[icomponent],
-                path,
-                rho,
-                AddedMass_Coeff_Ca;
-                name = nothing,
-            )
-
-        components[icomponent].mass = OWENS.get_material_mass(
-            components[icomponent].plyProps,
-            components[icomponent].nuMadIn,
-        )
-        components[icomponent].cost = [
-            "$name $(components[icomponent].mass[i]) kg, $(components[icomponent].plyProps.costs[i]) \$/kg: \$$(components[icomponent].mass[i]*components[icomponent].plyProps.costs[i])"
-            for (i, name) in enumerate(components[icomponent].plyProps.names)
-        ]
-    end
+    setup_sectional_props()
 
     if verbosity>1
         println(
@@ -1642,7 +1587,6 @@ function setupOWENS(
         mass_array;
         VTKmeshfilename,
     )
-
 
     function calcMass(sectionPropsArray, myort)
         mass = 0.0
