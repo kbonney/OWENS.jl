@@ -262,13 +262,14 @@ function setupOWENS_struct(
     aeroForcesAD, deformAeroAD, aeroForcesACDMS, deformAeroACDMS = setup_aerodynamic_model(
         blade_config,
         aero_config,
-        # tower_config,
+        tower_config,
         mesh_config,
         mesh_props,
         components,
         numadIn_bld,
         numadIn_strut,
         path,
+        myel,
         verbosity,
     )
 
