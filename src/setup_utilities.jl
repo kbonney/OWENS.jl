@@ -26,6 +26,34 @@ struct MeshConfig
     custommesh::Union{Nothing,Function} # this doesn't appear to be used anywhere
     connectBldTips2Twr::Bool
     AD15_ccw::Bool
+
+    function MeshConfig(;
+        Nslices::Int,
+        ntheta::Int,
+        ntelem::Int,
+        nbelem::Int,
+        ncelem::Int,
+        nselem::Int,
+        meshtype::String,
+        custommesh::Union{Nothing,Function}=nothing,
+        connectBldTips2Twr::Bool=false,
+        AD15_ccw::Bool=true
+    )
+        new(Nslices, ntheta, ntelem, nbelem, ncelem, nselem, meshtype, custommesh, connectBldTips2Twr, AD15_ccw)
+    end
+end
+
+struct MeshProperties
+    mymesh
+    myort
+    myjoint
+    AD15bldNdIdxRng
+    AD15bldElIdxRng
+    custom_mesh_outputs
+
+    function MeshProperties(; mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs)
+        new(mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs)
+    end
 end
 
 """
@@ -41,6 +69,10 @@ Contains the configuration for the tower.
 - `joint_type::Int`: The type of joint between the tower and the blades.
 - `c_mount_ratio::Float64`: The mount point of the struts to the tower.
 - `angularOffset::Float64`: The angular offset of the tower.
+- `NuMad_geom_xlscsv_file_twr::Union{Nothing,String}`: The path to the tower geometry file.
+- `NuMad_mat_xlscsv_file_twr::Union{Nothing,String}`: The path to the tower material file.
+- `NuMad_geom_xlscsv_file_strut::Union{Nothing,String}`: The path to the strut geometry file.
+- `NuMad_mat_xlscsv_file_strut::Union{Nothing,String}`: The path to the strut material file.
 """
 struct TowerConfig
     Htwr_base::Float64
@@ -52,6 +84,25 @@ struct TowerConfig
     angularOffset::Float64
     NuMad_geom_xlscsv_file_twr::Union{Nothing,String}
     NuMad_mat_xlscsv_file_twr::Union{Nothing,String}
+    NuMad_geom_xlscsv_file_strut::Union{Nothing,String}
+    NuMad_mat_xlscsv_file_strut::Union{Nothing,String}
+
+    function TowerConfig(;
+        Htwr_base::Float64,
+        Htwr_blds::Float64,
+        strut_twr_mountpoint::Vector{Float64},
+        strut_bld_mountpoint::Vector{Float64},
+        joint_type::Int,
+        c_mount_ratio::Float64,
+        angularOffset::Float64,
+        NuMad_geom_xlscsv_file_twr::Union{Nothing,String}=nothing,
+        NuMad_mat_xlscsv_file_twr::Union{Nothing,String}=nothing,
+        NuMad_geom_xlscsv_file_strut::Union{Nothing,String}=nothing,
+        NuMad_mat_xlscsv_file_strut::Union{Nothing,String}=nothing
+    )
+        new(Htwr_base, Htwr_blds, strut_twr_mountpoint, strut_bld_mountpoint, joint_type, c_mount_ratio, angularOffset,
+            NuMad_geom_xlscsv_file_twr, NuMad_mat_xlscsv_file_twr, NuMad_geom_xlscsv_file_strut, NuMad_mat_xlscsv_file_strut)
+    end
 end
 
 """
@@ -78,6 +129,19 @@ struct BladeConfig
     shapeY::Vector{Float64}
     NuMad_geom_xlscsv_file_bld::Union{Nothing,String}
     NuMad_mat_xlscsv_file_bld::Union{Nothing,String}
+
+    function BladeConfig(;
+        B::Int,
+        H::Float64,
+        R::Float64,
+        shapeZ::Vector{Float64},
+        shapeX::Vector{Float64},
+        shapeY::Vector{Float64},
+        NuMad_geom_xlscsv_file_bld::Union{Nothing,String}=nothing,
+        NuMad_mat_xlscsv_file_bld::Union{Nothing,String}=nothing
+    )
+        new(B, H, R, shapeZ, shapeX, shapeY, NuMad_geom_xlscsv_file_bld, NuMad_mat_xlscsv_file_bld)
+    end
 end
 
 """
@@ -98,6 +162,16 @@ struct MaterialConfig
     chord_scale::Vector{Float64}
     thickness_scale::Vector{Float64}
     AddedMass_Coeff_Ca::Float64
+
+    function MaterialConfig(;
+        stack_layers_bld::Union{Nothing,Matrix{Float64}}=nothing,
+        stack_layers_scale::Vector{Float64}=[1.0, 1.0],
+        chord_scale::Vector{Float64}=[1.0, 1.0],
+        thickness_scale::Vector{Float64}=[1.0, 1.0],
+        AddedMass_Coeff_Ca::Float64=0.0
+    )
+        new(stack_layers_bld, stack_layers_scale, chord_scale, thickness_scale, AddedMass_Coeff_Ca)
+    end
 end
 
 """
@@ -140,84 +214,124 @@ struct AeroConfig
     AeroModel::String
     DynamicStallModel::String
     numTS::Int
-    adi_lib::String
-    adi_rootname::String
-    windINPfilename::String
-    ifw_libfile::String
+    adi_lib::Union{Nothing,String}
+    adi_rootname::Union{Nothing,String}
+    windINPfilename::Union{Nothing,String}
+    ifw_libfile::Union{Nothing,String}
     ifw::Bool
     RPI::Bool
     Aero_AddedMass_Active::Bool
     Aero_RotAccel_Active::Bool
     Aero_Buoyancy_Active::Bool
     centrifugal_force_flag::Bool
+
+    function AeroConfig(;
+        rho::Float64=1.225,
+        mu::Float64=1.7894e-5,
+        RPM::Float64=1e-6,
+        Vinf::Float64=25.0,
+        eta::Float64=0.5,
+        delta_t::Float64=0.01,
+        AD15hubR::Float64=0.1,
+        WindType::Int=1,
+        AeroModel::String="DMS",
+        DynamicStallModel::String="BV",
+        numTS::Int=100,
+        adi_lib::Union{Nothing,String}=nothing,
+        adi_rootname::Union{Nothing,String}=nothing,
+        windINPfilename::Union{Nothing,String}=nothing,
+        ifw_libfile::Union{Nothing,String}=nothing,
+        ifw::Bool=false,
+        RPI::Bool=true,
+        Aero_AddedMass_Active::Bool=false,
+        Aero_RotAccel_Active::Bool=false,
+        Aero_Buoyancy_Active::Bool=false,
+        centrifugal_force_flag::Bool=false
+    )
+        new(rho, mu, RPM, Vinf, eta, delta_t, AD15hubR, WindType, AeroModel, DynamicStallModel,
+            numTS, adi_lib, adi_rootname, windINPfilename, ifw_libfile, ifw, RPI,
+            Aero_AddedMass_Active, Aero_RotAccel_Active, Aero_Buoyancy_Active, centrifugal_force_flag)
+    end
 end
 
 # Factory functions for default configurations
 function default_mesh_config()
     MeshConfig(
-        Nslices = 30,
-        ntheta = 30,
-        ntelem = 10,
-        nbelem = 60,
-        ncelem = 10,
-        nselem = 5,
-        meshtype = "Darrieus",
-        custommesh = nothing,
-        connectBldTips2Twr = false,
-        AD15_ccw = true,
-        verbosity = 0,
+        30,  # Nslices
+        30,  # ntheta
+        10,  # ntelem
+        60,  # nbelem
+        10,  # ncelem
+        5,   # nselem
+        "Darrieus",  # meshtype
+        nothing,  # custommesh
+        false,  # connectBldTips2Twr
+        true,   # AD15_ccw
     )
 end
 
 function default_tower_config()
     TowerConfig(
-        Htwr_base = 2.0,
-        Htwr_blds = 5.0,
-        strut_twr_mountpoint = [0.25, 0.75],
-        strut_bld_mountpoint = [0.25, 0.75],
-        joint_type = 2,
-        c_mount_ratio = 0.05,
-        angularOffset = -pi/2,
-        NuMad_geom_xlscsv_file_twr = nothing,
-        NuMad_mat_xlscsv_file_twr = nothing,
+        2.0,           # Htwr_base
+        5.0,           # Htwr_blds
+        [0.25, 0.75],  # strut_twr_mountpoint
+        [0.25, 0.75],  # strut_bld_mountpoint
+        2,             # joint_type
+        0.05,          # c_mount_ratio
+        -pi/2,         # angularOffset
+        nothing,       # NuMad_geom_xlscsv_file_twr
+        nothing,       # NuMad_mat_xlscsv_file_twr
+        nothing,       # NuMad_geom_xlscsv_file_strut
+        nothing        # NuMad_mat_xlscsv_file_strut
     )
 end
 
 function default_blade_config()
     BladeConfig(
-        B = 3,
-        H = 5.0,
-        R = 2.5,
-        shapeZ = collect(LinRange(0, 5.0, 31)),
-        shapeX = 2.5 .* (1.0 .- 4.0 .* (collect(LinRange(0, 5.0, 31))/5.0 .- 0.5) .^ 2),
-        shapeY = zeros(31),
-        NuMad_geom_xlscsv_file_bld = nothing,
-        NuMad_mat_xlscsv_file_bld = nothing,
+        3,  # B
+        5.0,  # H
+        2.5,  # R
+        collect(LinRange(0, 5.0, 31)),  # shapeZ
+        2.5 .* (1.0 .- 4.0 .* (collect(LinRange(0, 5.0, 31))/5.0 .- 0.5) .^ 2),  # shapeX
+        zeros(31),  # shapeY
+        nothing,  # NuMad_geom_xlscsv_file_bld
+        nothing   # NuMad_mat_xlscsv_file_bld
     )
 end
 
 function default_material_config()
     MaterialConfig(
-        stack_layers_bld = nothing,
-        stack_layers_scale = [1.0, 1.0],
-        chord_scale = [1.0, 1.0],
-        thickness_scale = [1.0, 1.0],
+        nothing,      # stack_layers_bld
+        [1.0, 1.0],   # stack_layers_scale
+        [1.0, 1.0],   # chord_scale
+        [1.0, 1.0],   # thickness_scale
+        0.0           # AddedMass_Coeff_Ca
     )
 end
 
 function default_aero_config()
     AeroConfig(
-        rho = 1.225,
-        mu = 1.7894e-5,
-        RPM = 1e-6,
-        Vinf = 25.0,
-        eta = 0.5,
-        ifw = false,
-        AD15hubR = 0.1,
-        WindType = 1,
-        AeroModel = "DMS",
-        DynamicStallModel = "BV",
-        RPI = true,
+        1.225,        # rho
+        1.7894e-5,    # mu
+        1e-6,         # RPM
+        25.0,         # Vinf
+        0.5,          # eta
+        0.01,         # delta_t
+        0.1,          # AD15hubR
+        1,            # WindType
+        "DMS",        # AeroModel
+        "BV",         # DynamicStallModel
+        100,          # numTS
+        "",           # adi_lib
+        "",           # adi_rootname
+        "",           # windINPfilename
+        "",           # ifw_libfile
+        false,         # ifw
+        true,          # RPI
+        false,         # Aero_AddedMass_Active
+        false,         # Aero_RotAccel_Active
+        false,         # Aero_Buoyancy_Active
+        false          # centrifugal_force_flag
     )
 end
 
@@ -226,6 +340,7 @@ function setup_mesh(
     mesh_config::MeshConfig,
     blade_config::BladeConfig,
     tower_config::TowerConfig,
+    verbosity::Int64 = 1
 )
     mymesh, myort, myjoint, AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs =
         OWENS.create_mesh_struts(;
@@ -266,7 +381,7 @@ struct SectionalProperties
     rotationalEffects::Any
     end
 
-function setup_sectional_props()
+function setup_sectional_props(components, mymesh, path, rho, AddedMass_Coeff_Ca, NuMad_geom_xlscsv_file_twr, NuMad_mat_xlscsv_file_twr, NuMad_geom_xlscsv_file_bld, NuMad_mat_xlscsv_file_bld, NuMad_geom_xlscsv_file_strut, NuMad_mat_xlscsv_file_strut, NuMad_geom_xlscsv_file_intra_blade_cable, NuMad_mat_xlscsv_file_intra_blade_cable, NuMad_geom_xlscsv_file_guys, NuMad_mat_xlscsv_file_guys, verbosity)
     sectionPropsArray = []
     stiff_array = []
     mass_array = []
@@ -281,8 +396,20 @@ function setup_sectional_props()
             components[icomponent].input_materials = NuMad_mat_xlscsv_file_bld
         elseif contains(components[icomponent].name, "strut")
             istrut = parse(Int, components[icomponent].name[end]) #This assumes that you have a numad file for each strut, and that you have 9 or fewer struts
-            components[icomponent].input_layup = NuMad_geom_xlscsv_file_strut[istrut]
-            components[icomponent].input_materials = NuMad_mat_xlscsv_file_strut
+            if isnothing(NuMad_geom_xlscsv_file_strut)
+                components[icomponent].input_layup = nothing
+            elseif typeof(NuMad_geom_xlscsv_file_strut) == String
+                components[icomponent].input_layup = NuMad_geom_xlscsv_file_strut
+            else
+                components[icomponent].input_layup = NuMad_geom_xlscsv_file_strut[istrut]
+            end
+            if isnothing(NuMad_mat_xlscsv_file_strut)
+                components[icomponent].input_materials = nothing
+            elseif typeof(NuMad_mat_xlscsv_file_strut) == String
+                components[icomponent].input_materials = NuMad_mat_xlscsv_file_strut
+            else
+                components[icomponent].input_materials = NuMad_mat_xlscsv_file_strut
+            end
         elseif contains(components[icomponent].name, "intra_cable")
             components[icomponent].input_layup = NuMad_geom_xlscsv_file_intra_blade_cable
             components[icomponent].input_materials = NuMad_mat_xlscsv_file_intra_blade_cable
@@ -290,6 +417,11 @@ function setup_sectional_props()
             components[icomponent].input_layup = NuMad_geom_xlscsv_file_guys
             components[icomponent].input_materials = NuMad_mat_xlscsv_file_guys
             rotationalEffects[components[icomponent].elNumbers] .= 0.0 #turn rotational effects off for guy wires
+        end
+
+        # Skip components with missing layup or materials
+        if isnothing(components[icomponent].input_layup) || isnothing(components[icomponent].input_materials)
+            continue
         end
 
         if verbosity>1
@@ -319,7 +451,7 @@ function setup_sectional_props()
             components[icomponent].nuMadIn,
         )
         components[icomponent].cost = [
-            "$name $(components[icomponent].mass[i]) kg, $(components[icomponent].plyProps.costs[i]) \$/kg: \$$(components[icomponent].mass[i]*components[icomponent].plyProps.costs[i])"
+            "$name $(components[icomponent].mass[i]) kg, $(components[icomponent].plyProps.costs[i]) /kg: \$( $(components[icomponent].mass[i]*components[icomponent].plyProps.costs[i]) )"
             for (i, name) in enumerate(components[icomponent].plyProps.names)
         ]
     end
@@ -333,14 +465,24 @@ end
 function setup_aerodynamic_model(
     blade_config::BladeConfig,
     aero_config::AeroConfig,
-    tower_config::TowerConfig,
-    numadIn_bld,
-    numadIn_strut,
+    # tower_config::TowerConfig,
+    mesh_config::MeshConfig,
+    mesh_props::MeshProperties,
+    components::Vector{OWENS.Component},  # Changed from Vector{Any} to Vector{OWENS.Component}
+    numadIn_bld::Any,
+    numadIn_strut::Vector{Nothing},  # Changed from Any to Vector{Nothing}
     path::String,
+    verbosity::Int64 = 1,
 )
+    # Initialize aerodynamic variables to nothing
+    # TODO: Add types to the variables for proper allocation
+    aeroForcesAD = nothing
+    deformAeroAD = nothing
+    aeroForcesACDMS = nothing
+    deformAeroACDMS = nothing
 
     # Unpack the config
-    AD15On = aero_config.AD15On
+    AD15On = aero_config.AeroModel == "AD"
     WindType = aero_config.WindType
     windINPfilename = aero_config.windINPfilename
     ifw_libfile = aero_config.ifw_libfile
@@ -350,12 +492,11 @@ function setup_aerodynamic_model(
     Aero_RotAccel_Active = aero_config.Aero_RotAccel_Active
     Aero_Buoyancy_Active = aero_config.Aero_Buoyancy_Active
     centrifugal_force_flag = aero_config.centrifugal_force_flag
-    ntheta = aero_config.ntheta
-    Nslices = aero_config.Nslices
+    ntheta = mesh_config.ntheta
+    Nslices = mesh_config.Nslices
     RPI = aero_config.RPI
     rho = aero_config.rho
     Vinf = aero_config.Vinf
-    tsr = aero_config.tsr
     mu = aero_config.mu
     eta = aero_config.eta
     ifw = aero_config.ifw
@@ -363,13 +504,15 @@ function setup_aerodynamic_model(
     mymesh = mesh_props.mymesh
     myort = mesh_props.myort
     myjoint = mesh_props.myjoint
-    components = blade_props.components
-    shapeX = blade_props.shapeX
-    shapeZ = blade_props.shapeZ
-    shapeY = blade_props.shapeY
-    AD15bldNdIdxRng = blade_props.AD15bldNdIdxRng
-    H = tower_config.H
-    verbosity = aero_config.verbosity
+    shapeX = blade_config.shapeX
+    shapeZ = blade_config.shapeZ
+    shapeY = blade_config.shapeY
+    AD15bldNdIdxRng = mesh_props.AD15bldNdIdxRng
+    H = blade_config.H
+    
+    # Calculate tsr locally
+    omega = aero_config.RPM / 60 * 2 * pi
+    tsr = omega * blade_config.R / aero_config.Vinf
     
     # Set up AeroDyn if used
     # Here we create AeroDyn the files, first by specifying the names, then by creating the files, TODO: hook up the direct sectionPropsArray_str
@@ -381,11 +524,11 @@ function setup_aerodynamic_model(
 
         NumADBldNds = NumADStrutNds = 10
 
-            bldchord_spl = OWENS.safeakima(
-                numadIn_bld.span ./ maximum(numadIn_bld.span),
-                numadIn_bld.chord,
-                LinRange(0, 1, NumADBldNds),
-            )
+        bldchord_spl = OWENS.safeakima(
+            numadIn_bld.span ./ maximum(numadIn_bld.span),
+            numadIn_bld.chord,
+            LinRange(0, 1, NumADBldNds),
+        )
 
         # Discretely assign the blade airfoils based on the next closest neighbor
         bld_airfoil_filenames = fill("nothing", NumADBldNds) #TODO: cable drag?
@@ -442,13 +585,13 @@ function setup_aerodynamic_model(
             end
         end
 
-            OWENSOpenFASTWrappers.writeADinputFile(
-                ad_input_file,
-                blade_filenames,
-                airfoil_filenames,
-                OLAF_filename;
-                rho,
-            )
+        OWENSOpenFASTWrappers.writeADinputFile(
+            ad_input_file,
+            blade_filenames,
+            airfoil_filenames,
+            OLAF_filename;
+            rho,
+        )
 
         NumADBody = length(AD15bldNdIdxRng[:, 1])
         bld_len = zeros(NumADBody)
@@ -551,41 +694,41 @@ function setup_aerodynamic_model(
 
         OWENSOpenFASTWrappers.writeIWfile(Vinf, ifw_input_file; WindType, windINPfilename)
 
-            OWENSOpenFASTWrappers.setupTurb(
+        OWENSOpenFASTWrappers.setupTurb(
             adi_lib,
-                ad_input_file,
-                ifw_input_file,
+            ad_input_file,
+            ifw_input_file,
             adi_rootname,
-                [shapeX],
-                [shapeZ],
-                [B],
+            [shapeX],
+            [shapeZ],
+            [B],
             [Htwr_base],
-                [mymesh],
-                [myort],
-                [AD15bldNdIdxRng],
-                [AD15bldElIdxRng];
-                rho = rho,
+            [mymesh],
+            [myort],
+            [AD15bldNdIdxRng],
+            [AD15bldElIdxRng];
+            rho = rho,
             adi_dt = delta_t,
             adi_tmax = numTS*delta_t,
-                omega = [omega],
+            omega = [omega],
             adi_wrOuts = 1,     # write output file [0 none, 1 txt, 2 binary, 3 both]
             adi_DT_Outs = delta_t,   # output frequency
-                numTurbines = 1,
-                refPos = [[0, 0, 0]],
-                hubPos = [[0, 0, 0.0]],
-                hubAngle = [[0, 0, 0]],
-                nacPos = [[0, 0, 0]],
+            numTurbines = 1,
+            refPos = [[0, 0, 0]],
+            hubPos = [[0, 0, 0.0]],
+            hubAngle = [[0, 0, 0]],
+            nacPos = [[0, 0, 0]],
             adi_nstrut = [Nstrutperbld],
-                adi_debug = 0,
+            adi_debug = 0,
             isHAWT = false,     # true for HAWT, false for crossflow or VAWT
-            )
+        )
 
         aeroForcesAD(t, azi) = OWENS.mapAD15(
-                t,
-                azi,
-                [mymesh],
-                OWENSOpenFASTWrappers.advanceAD15;
-                alwaysrecalc = true,
+            t,
+            azi,
+            [mymesh],
+            OWENSOpenFASTWrappers.advanceAD15;
+            alwaysrecalc = true,
             verbosity,
         )
         deformAeroAD=OWENSOpenFASTWrappers.deformAD15
@@ -596,40 +739,40 @@ function setup_aerodynamic_model(
         #########################################
         #### translate from blade span to blade height between the numad definition and the vertical slice positions
         #### First get the angles from the overall geometry npoints and go to the numad npoints
-            delta_xs = shapeX[2:end] - shapeX[1:(end-1)]
-            delta_zs = shapeZ[2:end] - shapeZ[1:(end-1)]
-            delta3D = atan.(delta_xs ./ delta_zs)
-            delta3D_spl = OWENS.safeakima(
-                shapeZ[1:(end-1)] ./ maximum(shapeZ[1:(end-1)]),
-                delta3D,
-                LinRange(0, 1, length(numadIn_bld.span)-1),
-            )
+        delta_xs = shapeX[2:end] - shapeX[1:(end-1)]
+        delta_zs = shapeZ[2:end] - shapeZ[1:(end-1)]
+        delta3D = atan.(delta_xs ./ delta_zs)
+        delta3D_spl = OWENS.safeakima(
+            shapeZ[1:(end-1)] ./ maximum(shapeZ[1:(end-1)]),
+            delta3D,
+            LinRange(0, 1, length(numadIn_bld.span)-1),
+        )
         #### now convert the numad span to a height
         bld_height_numad =
             cumsum(diff(numadIn_bld.span) .* (1.0 .- abs.(sin.(delta3D_spl))))
-            bld_height_numad_unit = bld_height_numad ./ maximum(bld_height_numad)
+        bld_height_numad_unit = bld_height_numad ./ maximum(bld_height_numad)
         #### now we can use it to access the numad data 
-            chord = OWENS.safeakima(
-                bld_height_numad_unit,
-                numadIn_bld.chord,
-                LinRange(bld_height_numad_unit[1], 1, Nslices),
-            )
-            airfoils = fill("nothing", Nslices)
+        chord = OWENS.safeakima(
+            bld_height_numad_unit,
+            numadIn_bld.chord,
+            LinRange(bld_height_numad_unit[1], 1, Nslices),
+        )
+        airfoils = fill("nothing", Nslices)
 
-            twist = OWENS.safeakima(
-                bld_height_numad_unit,
-                numadIn_bld.twist_d .* pi/180,
-                LinRange(bld_height_numad_unit[1], 1, Nslices),
-            )
+        twist = OWENS.safeakima(
+            bld_height_numad_unit,
+            numadIn_bld.twist_d .* pi/180,
+            LinRange(bld_height_numad_unit[1], 1, Nslices),
+        )
 
         # Discretely assign the airfoils
-            for (iheight_numad, height_numad) in enumerate(bld_height_numad_unit)
-                for (iheight, height_slices) in enumerate(collect(LinRange(0, 1, Nslices)))
-                    if airfoils[iheight]=="nothing" && height_slices<=height_numad
-                        airfoils[iheight] = "$(numadIn_bld.airfoil[iheight_numad]).dat"
-                    end
+        for (iheight_numad, height_numad) in enumerate(bld_height_numad_unit)
+            for (iheight, height_slices) in enumerate(collect(LinRange(0, 1, Nslices)))
+                if airfoils[iheight]=="nothing" && height_slices<=height_numad
+                    airfoils[iheight] = "$(numadIn_bld.airfoil[iheight_numad]).dat"
                 end
             end
+        end
 
         # Map the element wise mass to the input aero shape
         mass_bld = []
@@ -640,31 +783,31 @@ function setup_aerodynamic_model(
             end
         end
 
-            rhoA_el = [mass_bld[i][1, 1] for i = 1:length(mass_bld)]
-            if AD15bldNdIdxRng[1, 2]<AD15bldNdIdxRng[1, 1]
-                bld_z_node = mymesh.z[AD15bldNdIdxRng[1, 2]:AD15bldNdIdxRng[1, 1]]
-            else
-                bld_z_node = mymesh.z[AD15bldNdIdxRng[1, 1]:AD15bldNdIdxRng[1, 2]]
-            end
+        rhoA_el = [mass_bld[i][1, 1] for i = 1:length(mass_bld)]
+        if AD15bldNdIdxRng[1, 2]<AD15bldNdIdxRng[1, 1]
+            bld_z_node = mymesh.z[AD15bldNdIdxRng[1, 2]:AD15bldNdIdxRng[1, 1]]
+        else
+            bld_z_node = mymesh.z[AD15bldNdIdxRng[1, 1]:AD15bldNdIdxRng[1, 2]]
+        end
         bld_z_el =
             bld_z_node[1:(end-1)] .+ (bld_z_node[2:end] .- bld_z_node[1:(end-1)]) ./ 2
-            rhoA_in = FLOWMath.akima(bld_z_el, rhoA_el, shapeZ)
+        rhoA_in = FLOWMath.akima(bld_z_el, rhoA_el, shapeZ)
 
-            OWENSAero.setupTurb(
-                shapeX,
-                shapeZ,
-                B,
-                chord,
-                tsr,
-                Vinf;
-                AeroModel,
-                DynamicStallModel,
-                afname = airfoils,
-                bld_y = shapeY,
-                rho,
+        OWENSAero.setupTurb(
+            shapeX,
+            shapeZ,
+            B,
+            chord,
+            tsr,
+            Vinf;
+            AeroModel,
+            DynamicStallModel,
+            afname = airfoils,
+            bld_y = shapeY,
+            rho,
             twist, #TODO: verify twist is in same direction
-                mu,
-                eta,
+            mu,
+            eta,
             ifw, #TODO: propogate WindType
             turbsim_filename = windINPfilename,
             ifw_libfile,
@@ -673,20 +816,20 @@ function setup_aerodynamic_model(
             Aero_RotAccel_Active,
             Aero_Buoyancy_Active,
             centrifugal_force_flag,
-                ntheta,
-                Nslices,
-                RPI,
-                rhoA_in,
-            )
+            ntheta,
+            Nslices,
+            RPI,
+            rhoA_in,
+        )
 
         aeroForcesACDMS(t, azi) = OWENS.mapACDMS(
-                t,
-                azi,
-                mymesh,
+            t,
+            azi,
+            mymesh,
             myel,
-                OWENSAero.AdvanceTurbineInterpolate;
-                alwaysrecalc = true,
-            )
+            OWENSAero.AdvanceTurbineInterpolate;
+            alwaysrecalc = true,
+        )
         deformAeroACDMS = OWENSAero.deformTurb
     end
 

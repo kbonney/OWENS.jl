@@ -43,6 +43,12 @@ export Unsteady #, UnsteadyROM
 export owens
 export Modal#, Flutter
 # export Steady
+
+# Export types and functions from setup_utilities.jl
+export MeshConfig, TowerConfig, BladeConfig, MaterialConfig, AeroConfig
+export default_mesh_config, default_tower_config, default_blade_config, default_material_config, default_aero_config
+export setup_mesh, setup_sectional_props, setup_aerodynamic_model
+
 function __init__()
 
 println("\nThis program is running OWENS.jl, the Offshore/Onshore Wind/Water Energy Simulator for turbine type devices
@@ -74,6 +80,7 @@ include("./AeroMapping.jl")
 include("./fileio.jl")
 include("./meshing_utilities.jl")
 include("./gxbeam_conversion.jl")
+include("./setup_utilities.jl")
 include("./SetupTurbine.jl")
 include("./topRunDLC.jl")
 include("./windio.jl")
