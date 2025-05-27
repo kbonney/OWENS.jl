@@ -45,14 +45,9 @@ function setupOWENS_struct(
 
     # Unpack the aero config
     AeroModel = aero_config.AeroModel
+    AD15On = AeroModel == "AD"
 
     custom_mesh_outputs = []
-
-    if AeroModel=="AD"
-        AD15On = true
-    else
-        AD15On = false
-    end
 
     if meshtype == "Darrieus"
         connectBldTips2Twr = true
@@ -273,31 +268,38 @@ function setupOWENS_struct(
         verbosity,
     )
 
+    # Initialize mass and stiffness variables
+    # mass_twr = nothing
+    # mass_bld = nothing
+    # stiff_twr = nothing
+    # stiff_bld = nothing
+    # bld_precompinput = nothing
+    # bld_precompoutput = nothing
+    # plyprops_bld = nothing
+    # lam_U_bld = nothing
+    # lam_L_bld = nothing
+    # twr_precompinput = nothing
+    # twr_precompoutput = nothing
+    # plyprops_twr = nothing
+    # lam_U_twr = nothing
+    # lam_L_twr = nothing
+    # mass_breakout_blds = nothing
+    # mass_breakout_twr = nothing
+
+    # # Calculate mass breakouts
+    # if !isnothing(mass_bld)
+    #     mass_breakout_blds = sum(mass_bld)
+    # end
+    # if !isnothing(mass_twr)
+    #     mass_breakout_twr = sum(mass_twr)
+    # end
+
+    # Return values based on componentized flag
     if return_componentized
         if AD15On
-            return mymesh,
-            myel,
-            myort,
-            myjoint,
-            components,
-            aeroForcesAD,
-            deformAeroAD,
-            system,
-            assembly,
-            sections,
-            R
+            return mymesh,myel,myort,myjoint,components,aeroForcesAD,deformAeroAD,system, assembly, sections
         else
-            return mymesh,
-            myel,
-            myort,
-            myjoint,
-            components,
-            aeroForcesACDMS,
-            deformAeroACDMS,
-            system,
-            assembly,
-            sections,
-            R
+            return mymesh,myel,myort,myjoint,components,aeroForcesACDMS,deformAeroACDMS,system, assembly, sections
         end
     else
         @warn "Not using the componetized model is being depreciated, please consider updating to return_componentized=true"
@@ -322,7 +324,7 @@ function setupOWENS_struct(
         mass_breakout_blds = []
 
         for component in components
-            if contains(component.name, "tower")
+            if contains(component.name,"tower")
                 mass_twr = component.mass_matrix
                 stiff_twr = component.stiff_matrix
                 twr_precompinput = component.preCompInput
@@ -334,7 +336,7 @@ function setupOWENS_struct(
                 mass_breakout_twr = component.mass
             end
 
-            if contains(component.name, "blade1")
+            if contains(component.name,"blade1")
                 mass_bld = component.mass_matrix
                 stiff_bld = component.stiff_matrix
                 bld_precompinput = component.preCompInput
@@ -346,77 +348,19 @@ function setupOWENS_struct(
                 mass_breakout_blds = component.mass
             end
         end
-
+        
         if AD15On
-            return mymesh,
-            myel,
-            myort,
-            myjoint,
-            sectionPropsArray,
-            mass_twr,
-            mass_bld,
-            stiff_twr,
-            stiff_bld,
-            bld_precompinput,
-            bld_precompoutput,
-            plyprops_bld,
-            numadIn_bld,
-            lam_U_bld,
-            lam_L_bld,
-            twr_precompinput,
-            twr_precompoutput,
-            plyprops_twr,
-            numadIn_twr,
-            lam_U_twr,
-            lam_L_twr,
-            aeroForcesAD,
-            deformAeroAD,
-            mass_breakout_blds,
-            mass_breakout_twr,
-            system,
-            assembly,
-            sections,
-            AD15bldNdIdxRng,
-            AD15bldElIdxRng,
-            custom_mesh_outputs,
-            stiff_array,
-            mass_array,
-            R
+            return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
+            stiff_twr, stiff_bld,bld_precompinput,
+            bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+            twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForcesAD,deformAeroAD,
+            mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs,stiff_array,mass_array
         else
-            return mymesh,
-            myel,
-            myort,
-            myjoint,
-            sectionPropsArray,
-            mass_twr,
-            mass_bld,
-            stiff_twr,
-            stiff_bld,
-            bld_precompinput,
-            bld_precompoutput,
-            plyprops_bld,
-            numadIn_bld,
-            lam_U_bld,
-            lam_L_bld,
-            twr_precompinput,
-            twr_precompoutput,
-            plyprops_twr,
-            numadIn_twr,
-            lam_U_twr,
-            lam_L_twr,
-            aeroForcesACDMS,
-            deformAeroACDMS,
-            mass_breakout_blds,
-            mass_breakout_twr,
-            system,
-            assembly,
-            sections,
-            AD15bldNdIdxRng,
-            AD15bldElIdxRng,
-            custom_mesh_outputs,
-            stiff_array,
-            mass_array,
-            R
+            return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
+            stiff_twr, stiff_bld,bld_precompinput,
+            bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
+            twr_precompinput,twr_precompoutput,plyprops_twr,numadIn_twr,lam_U_twr,lam_L_twr,aeroForcesACDMS,deformAeroACDMS,
+            mass_breakout_blds,mass_breakout_twr,system,assembly,sections,AD15bldNdIdxRng, AD15bldElIdxRng, custom_mesh_outputs,stiff_array,mass_array
         end
     end
 end
@@ -450,16 +394,16 @@ function setupOWENS(
     adi_rootname = "./Example",
     windINPfilename = "$(path)/data/turbsim/115mx115m_30x30_25.0msETM.bts",
     ifw_libfile = "$(path)/bin/libifw_c_binding",
-    NuMad_geom_xlscsv_file_twr = nothing,
-    NuMad_mat_xlscsv_file_twr = nothing,
-    NuMad_geom_xlscsv_file_bld = nothing,
-    NuMad_mat_xlscsv_file_bld = nothing,
-    NuMad_geom_xlscsv_file_strut = nothing,
-    NuMad_mat_xlscsv_file_strut = nothing,
-    NuMad_geom_xlscsv_file_intra_blade_cable = nothing,
-    NuMad_mat_xlscsv_file_intra_blade_cable = nothing,
-    NuMad_geom_xlscsv_file_guys = nothing,
-    NuMad_mat_xlscsv_file_guys = nothing,
+    NuMad_geom_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_mat_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_geom_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_mat_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_geom_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_mat_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_geom_xlscsv_file_intra_blade_cable::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_mat_xlscsv_file_intra_blade_cable::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_geom_xlscsv_file_guys::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
+    NuMad_mat_xlscsv_file_guys::Union{Nothing,String,OrderedDict{Symbol,Any}} = nothing,
     stack_layers_bld = nothing,
     stack_layers_scale = [1.0, 1.0],
     chord_scale = [1.0, 1.0],

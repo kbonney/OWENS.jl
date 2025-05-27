@@ -1,3 +1,5 @@
+using OrderedCollections: OrderedDict
+
 """
     MeshConfig
 
@@ -69,10 +71,10 @@ Contains the configuration for the tower.
 - `joint_type::Int`: The type of joint between the tower and the blades.
 - `c_mount_ratio::Float64`: The mount point of the struts to the tower.
 - `angularOffset::Float64`: The angular offset of the tower.
-- `NuMad_geom_xlscsv_file_twr::Union{Nothing,String}`: The path to the tower geometry file.
-- `NuMad_mat_xlscsv_file_twr::Union{Nothing,String}`: The path to the tower material file.
-- `NuMad_geom_xlscsv_file_strut::Union{Nothing,String}`: The path to the strut geometry file.
-- `NuMad_mat_xlscsv_file_strut::Union{Nothing,String}`: The path to the strut material file.
+- `NuMad_geom_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the tower geometry file.
+- `NuMad_mat_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the tower material file.
+- `NuMad_geom_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the strut geometry file.
+- `NuMad_mat_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the strut material file.
 """
 struct TowerConfig
     Htwr_base::Float64
@@ -82,10 +84,10 @@ struct TowerConfig
     joint_type::Int
     c_mount_ratio::Float64
     angularOffset::Float64
-    NuMad_geom_xlscsv_file_twr::Union{Nothing,String}
-    NuMad_mat_xlscsv_file_twr::Union{Nothing,String}
-    NuMad_geom_xlscsv_file_strut::Union{Nothing,String}
-    NuMad_mat_xlscsv_file_strut::Union{Nothing,String}
+    NuMad_geom_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}}
+    NuMad_mat_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}}
+    NuMad_geom_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}
+    NuMad_mat_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}
 
     function TowerConfig(;
         Htwr_base::Float64,
@@ -95,10 +97,10 @@ struct TowerConfig
         joint_type::Int,
         c_mount_ratio::Float64,
         angularOffset::Float64,
-        NuMad_geom_xlscsv_file_twr::Union{Nothing,String}=nothing,
-        NuMad_mat_xlscsv_file_twr::Union{Nothing,String}=nothing,
-        NuMad_geom_xlscsv_file_strut::Union{Nothing,String}=nothing,
-        NuMad_mat_xlscsv_file_strut::Union{Nothing,String}=nothing
+        NuMad_geom_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}}=nothing,
+        NuMad_mat_xlscsv_file_twr::Union{Nothing,String,OrderedDict{Symbol,Any}}=nothing,
+        NuMad_geom_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}=nothing,
+        NuMad_mat_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}=nothing
     )
         new(Htwr_base, Htwr_blds, strut_twr_mountpoint, strut_bld_mountpoint, joint_type, c_mount_ratio, angularOffset,
             NuMad_geom_xlscsv_file_twr, NuMad_mat_xlscsv_file_twr, NuMad_geom_xlscsv_file_strut, NuMad_mat_xlscsv_file_strut)
@@ -117,8 +119,8 @@ Contains the configuration for the blades.
 - `shapeZ::Vector{Float64}`: The z-coordinates of the blade.
 - `shapeX::Vector{Float64}`: The x-coordinates of the blade.
 - `shapeY::Vector{Float64}`: The y-coordinates of the blade.
-- `NuMad_geom_xlscsv_file_bld::Union{Nothing,String}`: The path to the blade geometry file.
-- `NuMad_mat_xlscsv_file_bld::Union{Nothing,String}`: The path to the blade material file.
+- `NuMad_geom_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the blade geometry file.
+- `NuMad_mat_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the blade material file.
 """
 struct BladeConfig
     B::Int
@@ -127,8 +129,8 @@ struct BladeConfig
     shapeZ::Vector{Float64}
     shapeX::Vector{Float64}
     shapeY::Vector{Float64}
-    NuMad_geom_xlscsv_file_bld::Union{Nothing,String}
-    NuMad_mat_xlscsv_file_bld::Union{Nothing,String}
+    NuMad_geom_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}
+    NuMad_mat_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}
 
     function BladeConfig(;
         B::Int,
@@ -137,8 +139,8 @@ struct BladeConfig
         shapeZ::Vector{Float64},
         shapeX::Vector{Float64},
         shapeY::Vector{Float64},
-        NuMad_geom_xlscsv_file_bld::Union{Nothing,String}=nothing,
-        NuMad_mat_xlscsv_file_bld::Union{Nothing,String}=nothing
+        NuMad_geom_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}=nothing,
+        NuMad_mat_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}=nothing
     )
         new(B, H, R, shapeZ, shapeX, shapeY, NuMad_geom_xlscsv_file_bld, NuMad_mat_xlscsv_file_bld)
     end
@@ -465,13 +467,14 @@ end
 function setup_aerodynamic_model(
     blade_config::BladeConfig,
     aero_config::AeroConfig,
-    # tower_config::TowerConfig,
+    tower_config::TowerConfig,
     mesh_config::MeshConfig,
     mesh_props::MeshProperties,
-    components::Vector{OWENS.Component},  # Changed from Vector{Any} to Vector{OWENS.Component}
+    components::Vector{OWENS.Component},
     numadIn_bld::Any,
-    numadIn_strut::Vector{Nothing},  # Changed from Any to Vector{Nothing}
+    numadIn_strut::Vector{Nothing},
     path::String,
+    myel::OWENSFEA.El,
     verbosity::Int64 = 1,
 )
     # Initialize aerodynamic variables to nothing
@@ -494,6 +497,7 @@ function setup_aerodynamic_model(
     centrifugal_force_flag = aero_config.centrifugal_force_flag
     ntheta = mesh_config.ntheta
     Nslices = mesh_config.Nslices
+    meshtype = mesh_config.meshtype
     RPI = aero_config.RPI
     rho = aero_config.rho
     Vinf = aero_config.Vinf
@@ -509,6 +513,7 @@ function setup_aerodynamic_model(
     shapeY = blade_config.shapeY
     AD15bldNdIdxRng = mesh_props.AD15bldNdIdxRng
     H = blade_config.H
+    Htwr_base = tower_config.Htwr_base
     
     # Calculate tsr locally
     omega = aero_config.RPM / 60 * 2 * pi
@@ -833,6 +838,7 @@ function setup_aerodynamic_model(
         deformAeroACDMS = OWENSAero.deformTurb
     end
 
+    # Always return all four values, even if some are nothing
     return aeroForcesAD, deformAeroAD, aeroForcesACDMS, deformAeroACDMS
 end
 
