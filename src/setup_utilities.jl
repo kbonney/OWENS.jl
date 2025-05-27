@@ -17,7 +17,7 @@ Contains the configuration for the mesh.
 - `connectBldTips2Twr::Bool`: Whether to connect the blade tips to the tower.
 - `AD15_ccw::Bool`: Whether to use the AD15 convention of VAWT counter-clockwise with blade root at top (blade points down).
 """
-struct MeshConfig
+mutable struct MeshConfig
     Nslices::Int
     ntheta::Int
     ntelem::Int
@@ -76,7 +76,7 @@ Contains the configuration for the tower.
 - `NuMad_geom_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the strut geometry file.
 - `NuMad_mat_xlscsv_file_strut::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the strut material file.
 """
-struct TowerConfig
+mutable struct TowerConfig
     Htwr_base::Float64
     Htwr_blds::Float64
     strut_twr_mountpoint::Vector{Float64}
@@ -122,7 +122,7 @@ Contains the configuration for the blades.
 - `NuMad_geom_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the blade geometry file.
 - `NuMad_mat_xlscsv_file_bld::Union{Nothing,String,OrderedDict{Symbol,Any}}`: The path to the blade material file.
 """
-struct BladeConfig
+mutable struct BladeConfig
     B::Int
     H::Float64
     R::Float64
@@ -158,7 +158,7 @@ Contains the material properties for the blades, struts, and tower.
 - `thickness_scale::Vector{Float64}`: The scale factors for the thickness.
 - `AddedMass_Coeff_Ca::Float64`: The added mass coefficient.
 """
-struct MaterialConfig
+mutable struct MaterialConfig
     stack_layers_bld::Union{Nothing,Matrix{Float64}}
     stack_layers_scale::Vector{Float64}
     chord_scale::Vector{Float64}
@@ -204,7 +204,7 @@ Contains the configuration for the aerodynamic model.
 - `Aero_Buoyancy_Active::Bool`: Whether to use the buoyancy model.
 - `centrifugal_force_flag::Bool`: Whether to use the centrifugal force model.
 """
-struct AeroConfig
+mutable struct AeroConfig
     rho::Float64
     mu::Float64
     RPM::Float64
@@ -226,6 +226,7 @@ struct AeroConfig
     Aero_RotAccel_Active::Bool
     Aero_Buoyancy_Active::Bool
     centrifugal_force_flag::Bool
+    AD15On::Bool
 
     function AeroConfig(;
         rho::Float64=1.225,
@@ -248,11 +249,12 @@ struct AeroConfig
         Aero_AddedMass_Active::Bool=false,
         Aero_RotAccel_Active::Bool=false,
         Aero_Buoyancy_Active::Bool=false,
-        centrifugal_force_flag::Bool=false
+        centrifugal_force_flag::Bool=false,
+        AD15On::Bool=false
     )
         new(rho, mu, RPM, Vinf, eta, delta_t, AD15hubR, WindType, AeroModel, DynamicStallModel,
             numTS, adi_lib, adi_rootname, windINPfilename, ifw_libfile, ifw, RPI,
-            Aero_AddedMass_Active, Aero_RotAccel_Active, Aero_Buoyancy_Active, centrifugal_force_flag)
+            Aero_AddedMass_Active, Aero_RotAccel_Active, Aero_Buoyancy_Active, centrifugal_force_flag, AD15On)
     end
 end
 

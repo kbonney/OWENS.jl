@@ -30,40 +30,24 @@ function setupOWENS_struct(
 
     # Unpack the mesh config
     meshtype = mesh_config.meshtype
-    connectBldTips2Twr = mesh_config.connectBldTips2Twr
+    mesh_config.connectBldTips2Twr = meshtype == "Darrieus"
+
 
     # Unpack the blade config
     B = blade_config.B
-    shapeX = blade_config.shapeX
     shapeZ = blade_config.shapeZ
-    shapeY = blade_config.shapeY
-
-    # Unpack the tower config
-
-    # Unpack the material config
-
 
     # Unpack the aero config
     AeroModel = aero_config.AeroModel
-    AD15On = AeroModel == "AD"
+    aero_config.AD15On = AeroModel == "AD"
 
     custom_mesh_outputs = []
-
-    if meshtype == "Darrieus"
-        connectBldTips2Twr = true
-    else
-        connectBldTips2Twr = false
-    end
 
     if minimum(shapeZ)!=0
         @error "blade shapeZ must start at 0.0"
     end
 
-    if material_config.AddedMass_Coeff_Ca>0.0
-        centrifugal_force_flag = true
-    else
-        centrifugal_force_flag = false
-    end
+    aero_config.centrifugal_force_flag =  material_config.AddedMass_Coeff_Ca>0.0
 
     # Here is where we take the inputs from setupOWENS and break out what is going on behind the function.
     # We do some intermediate calculations on the blade shape and angles
@@ -77,12 +61,6 @@ function setupOWENS_struct(
        typeof(NuMad_geom_xlscsv_file_strut)==OrderedCollections.OrderedDict{Symbol,Any}
         NuMad_geom_xlscsv_file_strut = fill(NuMad_geom_xlscsv_file_strut, Nstrutperbld)
     end
-
-    Nbld = B
-    H = maximum(shapeZ) #m,
-    R = 0.0 # Set radius to 0.0 for default case
-    omega = aero_config.RPM / 60 * 2 * pi
-    tsr = omega*R/aero_config.Vinf
 
     nothing
 
@@ -99,7 +77,7 @@ function setupOWENS_struct(
     myort = mesh_props.myort
     myjoint = mesh_props.myjoint
 
-    nTwrElem = Int(mymesh.meshSeg[1])+1
+    # nTwrElem = Int(mymesh.meshSeg[1])+1
     # try
     #     if contains(NuMad_mat_xlscsv_file_bld,"34m") || meshtype == "ARCUS" #TODO: this is really odd, 
     #         nTwrElem = Int(mymesh.meshSeg[1])+1
@@ -158,6 +136,7 @@ function setupOWENS_struct(
         blade_config.NuMad_mat_xlscsv_file_bld,
         tower_config.NuMad_geom_xlscsv_file_strut,
         tower_config.NuMad_mat_xlscsv_file_strut,
+        # TODO: Add these
         nothing, # NuMad_geom_xlscsv_file_intra_blade_cable
         nothing, # NuMad_mat_xlscsv_file_intra_blade_cable
         nothing, # NuMad_geom_xlscsv_file_guys
@@ -251,7 +230,7 @@ function setupOWENS_struct(
     strut_component_index = findall(s -> contains(s.name, "strut"), components) #This assumes 9 or fewer blades, not including struts
     numadIn_strut = [
         components[strut_component_index1].nuMadIn for
-        strut_component_index1 in strut_component_index[1:Nbld:end]
+        strut_component_index1 in strut_component_index[1:B:end]
     ]
     
     aeroForcesAD, deformAeroAD, aeroForcesACDMS, deformAeroACDMS = setup_aerodynamic_model(
@@ -296,7 +275,7 @@ function setupOWENS_struct(
 
     # Return values based on componentized flag
     if return_componentized
-        if AD15On
+        if aero_config.AD15On
             return mymesh,myel,myort,myjoint,components,aeroForcesAD,deformAeroAD,system, assembly, sections
         else
             return mymesh,myel,myort,myjoint,components,aeroForcesACDMS,deformAeroACDMS,system, assembly, sections
@@ -349,7 +328,7 @@ function setupOWENS_struct(
             end
         end
         
-        if AD15On
+        if aero_config.AD15On
             return mymesh,myel,myort,myjoint,sectionPropsArray,mass_twr, mass_bld,
             stiff_twr, stiff_bld,bld_precompinput,
             bld_precompoutput,plyprops_bld,numadIn_bld,lam_U_bld,lam_L_bld,
